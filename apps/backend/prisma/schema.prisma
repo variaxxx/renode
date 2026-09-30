@@ -39,6 +39,47 @@ model Provider {
   note       String?  @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+  servers    Server[]
 
   @@map("provider")
+}
+
+enum ServerStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum Currency {
+  RUB
+  USD
+  EUR
+}
+
+model Server {
+  id                   String       @id @default(uuid()) @db.Uuid
+  providerId           String       @map("provider_id") @db.Uuid
+  name                 String       @db.VarChar(160)
+  purpose              String       @db.VarChar(500)
+  status               ServerStatus @default(ACTIVE)
+  tariff               String       @db.VarChar(160)
+  cost                 Decimal      @db.Decimal(12, 2)
+  currency             Currency
+  billingPeriodMonths  Int          @map("billing_period_months")
+  nextPaymentDate      DateTime?    @map("next_payment_date") @db.Date
+  rentalEndDate        DateTime?    @map("rental_end_date") @db.Date
+  cancellationDeadline DateTime?    @map("cancellation_deadline") @db.Date
+  autoRenew            Boolean      @default(false) @map("auto_renew")
+  ipAddress            String?      @map("ip_address") @db.VarChar(45)
+  domain               String?      @db.VarChar(253)
+  project              String?      @db.VarChar(160)
+  tags                 String[]     @default([])
+  note                 String?      @db.Text
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+  provider             Provider     @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([providerId])
+  @@index([status, nextPaymentDate])
+  @@index([project])
+  @@map("server")
 }
