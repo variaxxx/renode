@@ -1,0 +1,24 @@
+{
+  "name": "renode",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "lint": "bun run --cwd apps/frontend lint && bun run --cwd apps/backend lint",
+    "format:check": "bun run --cwd apps/frontend format:check && bun run --cwd apps/backend format:check",
+    "build": "bun run --cwd apps/frontend build && bun run --cwd apps/backend build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.3",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.71.0"
+  }
+}

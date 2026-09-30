@@ -2,10 +2,10 @@
 
 ## 1. Каркас и инструменты
 
-- [ ] 1.1 Создать Bun workspace с отдельными frontend и backend пакетами и зафиксировать `bun.lock`; проверить `bun install --frozen-lockfile`.
-- [ ] 1.2 Настроить ESLint и Prettier для обоих пакетов и скрипты `lint` и `format:check`; проверить успешный запуск обоих скриптов на каркасе.
-- [ ] 1.3 Создать React/Vite frontend с Tailwind CSS и shadcn/ui, включить фиксированную темную тему; проверить сборку и вид темной стартовой страницы.
-- [ ] 1.4 Создать минимальный NestJS backend по skill `nestjs-feature-architecture` и отдельные точки входа API и воркера под Bun; проверить запуск обоих процессов и ответ health endpoint.
+- [x] 1.1 Создать Bun workspace с отдельными frontend и backend пакетами и зафиксировать `bun.lock`; проверить `bun install --frozen-lockfile`.
+- [x] 1.2 Настроить ESLint и Prettier для обоих пакетов и скрипты `lint` и `format:check`; проверить успешный запуск обоих скриптов на каркасе.
+- [x] 1.3 Создать React/Vite frontend с Tailwind CSS и shadcn/ui, включить фиксированную темную тему; проверить сборку и вид темной стартовой страницы.
+- [x] 1.4 Создать минимальный NestJS backend по skill `nestjs-feature-architecture` и отдельные точки входа API и воркера под Bun; проверить запуск обоих процессов и ответ health endpoint.
 
 ## 2. PostgreSQL и Prisma
 
