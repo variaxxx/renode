@@ -27,4 +27,4 @@
 
 ## Impact
 
-Потребуются frontend на React с shadcn/ui, backend API, PostgreSQL, фоновый воркер и Telegram-бот. Репозиторий пока содержит только каркас OpenSpec; существующий код и API не затрагиваются.
+Потребуются frontend на React с shadcn/ui, backend API и воркер на NestJS с Bun, Prisma ORM, PostgreSQL, ESLint и Prettier, а также Telegram-бот. Backend реализуется по соглашениям локального skill `nestjs-feature-architecture`. Репозиторий пока содержит только каркас OpenSpec; существующий код и API не затрагиваются.
