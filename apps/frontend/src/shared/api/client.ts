@@ -36,6 +36,10 @@ function errorMessage(code: string, fallback?: string): string {
     RATE_LIMITED: 'Слишком много попыток. Подождите минуту и повторите вход.',
     VALIDATION_ERROR: 'Проверьте введённые данные.',
     INTERNAL_ERROR: 'Ошибка сервера. Повторите попытку позже.',
+    PROVIDER_HAS_SERVERS:
+      'Сначала перенесите или удалите серверы этого провайдера.',
+    PROVIDER_NOT_FOUND: 'Провайдер не найден. Обновите список.',
+    PROVIDER_INVALID: 'Проверьте данные провайдера.',
   }
   return messages[code] ?? fallback ?? 'Не удалось выполнить запрос.'
 }
@@ -87,5 +91,6 @@ export async function apiRequest<T>(
     throw new ApiError(message, response.status, code)
   }
 
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
