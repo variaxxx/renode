@@ -11,4 +11,14 @@ export const envSchema = z.object({
       },
     ),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  FRONTEND_ORIGIN: z
+    .url()
+    .refine(
+      (value) =>
+        URL.canParse(value) &&
+        ['http:', 'https:'].includes(new URL(value).protocol) &&
+        new URL(value).origin === value,
+      { message: 'must be an HTTP(S) origin without a path' },
+    )
+    .optional(),
 })
