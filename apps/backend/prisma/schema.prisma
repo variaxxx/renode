@@ -31,3 +31,14 @@ model Session {
   @@index([expiresAt])
   @@map("session")
 }
+
+model Provider {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @db.VarChar(160)
+  accountUrl String   @map("account_url") @db.VarChar(2048)
+  note       String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("provider")
+}

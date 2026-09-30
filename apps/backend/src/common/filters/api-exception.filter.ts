@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthError } from '../../features/auth/auth.errors'
+import { ProviderError } from '../../features/providers/provider.errors'
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -26,7 +27,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
     code: string
     message: string
   } {
-    if (exception instanceof AuthError) {
+    if (exception instanceof AuthError || exception instanceof ProviderError) {
       return {
         status: exception.status,
         code: exception.code,

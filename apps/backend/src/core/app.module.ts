@@ -6,6 +6,7 @@ import { SessionGuard } from '../features/auth/guards/session.guard'
 import { CsrfGuard } from '../features/auth/guards/csrf.guard'
 import { HealthModule } from '../features/health/health.module'
 import { AuthModule } from '../features/auth/auth.module'
+import { ProviderModule } from '../features/providers/provider.module'
 import { PrismaModule } from '../infra/prisma/prisma.module'
 import { AppConfigModule } from './config.module'
 
@@ -14,6 +15,7 @@ import { AppConfigModule } from './config.module'
     AppConfigModule,
     AuthModule,
     HealthModule,
+    ProviderModule,
     PrismaModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
   ],
