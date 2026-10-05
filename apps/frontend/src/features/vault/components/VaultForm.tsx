@@ -1,3 +1,4 @@
+import { KeyRound } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -220,6 +221,7 @@ export function VaultForm({ mode, onComplete }: Props) {
         </p>
       )}
       <Button type="submit" disabled={pending || (!!candidate && !confirmed)}>
+        <KeyRound aria-hidden="true" className="size-4 shrink-0" />
         {pending
           ? 'Обрабатываем…'
           : candidate

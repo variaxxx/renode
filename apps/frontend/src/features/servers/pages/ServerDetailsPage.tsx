@@ -1,3 +1,4 @@
+import { Archive, CircleCheck, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
@@ -176,6 +177,7 @@ export function ServerDetailsPage() {
             variant="outline"
             onClick={() => void loadDetails()}
           >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </section>
@@ -207,6 +209,7 @@ export function ServerDetailsPage() {
                   setPaymentServer(server)
                 }}
               >
+                <CircleCheck aria-hidden="true" className="size-4 shrink-0" />
                 Оплачено
               </Button>
               <Button
@@ -218,6 +221,7 @@ export function ServerDetailsPage() {
                   setEditorOpen(true)
                 }}
               >
+                <Pencil aria-hidden="true" className="size-4 shrink-0" />
                 Изменить
               </Button>
               {server.status === 'ACTIVE' && (
@@ -225,6 +229,7 @@ export function ServerDetailsPage() {
                   variant="outline"
                   onClick={() => openConfirmation('archive')}
                 >
+                  <Archive aria-hidden="true" className="size-4 shrink-0" />
                   Архивировать
                 </Button>
               )}
@@ -232,6 +237,7 @@ export function ServerDetailsPage() {
                 variant="outline"
                 onClick={() => openConfirmation('delete')}
               >
+                <Trash2 aria-hidden="true" className="size-4 shrink-0" />
                 Удалить
               </Button>
             </div>
@@ -400,6 +406,11 @@ export function ServerDetailsPage() {
                   disabled={actionPending}
                   onClick={() => void handleAction()}
                 >
+                  {confirming === 'archive' ? (
+                    <Archive aria-hidden="true" className="size-4 shrink-0" />
+                  ) : (
+                    <Trash2 aria-hidden="true" className="size-4 shrink-0" />
+                  )}
                   {actionPending
                     ? 'Сохраняем…'
                     : confirming === 'archive'

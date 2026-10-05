@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { listPayments, type Payment } from '../api/payments'
@@ -58,6 +59,7 @@ export function PaymentHistory({
             variant="outline"
             onClick={() => setRetry((value) => value + 1)}
           >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </div>

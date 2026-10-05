@@ -1,3 +1,4 @@
+import { Plus, RefreshCw, Server as ServerIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -124,6 +125,7 @@ export function ServersPage() {
             setEditorOpen(true)
           }}
         >
+          <Plus aria-hidden="true" className="size-4 shrink-0" />
           Добавить сервер
         </Button>
       </div>
@@ -223,11 +225,16 @@ export function ServersPage() {
             className="mt-4"
             onClick={() => setRefreshKey((value) => value + 1)}
           >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </section>
       ) : servers.length === 0 ? (
         <section className="rounded-xl border border-border bg-card p-8 text-center">
+          <ServerIcon
+            aria-hidden="true"
+            className="mx-auto mb-4 size-8 text-muted-foreground"
+          />
           <h2 className="text-lg font-medium">Серверы не найдены</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {filters.search ||

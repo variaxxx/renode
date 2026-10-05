@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { routes } from '@/app/routes'
@@ -44,6 +45,7 @@ export function AdminLayout() {
             disabled={pending}
             onClick={handleSignOut}
           >
+            <LogOut aria-hidden="true" className="size-4 shrink-0" />
             Выйти
           </Button>
         </div>
@@ -57,9 +59,10 @@ export function AdminLayout() {
               to={route.path}
               end
               className={({ isActive }) =>
-                `shrink-0 rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isActive ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`
+                `flex items-center gap-2 shrink-0 rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isActive ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`
               }
             >
+              <route.icon aria-hidden="true" className="size-4 shrink-0" />
               {route.title}
             </NavLink>
           ))}
@@ -71,6 +74,7 @@ export function AdminLayout() {
             disabled={pending}
             onClick={handleSignOut}
           >
+            <LogOut aria-hidden="true" className="size-4 shrink-0" />
             {pending ? 'Выходим…' : 'Выйти'}
           </Button>
         </div>

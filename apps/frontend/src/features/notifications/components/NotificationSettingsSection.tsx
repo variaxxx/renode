@@ -1,3 +1,4 @@
+import { Bell, RefreshCw, Save, Send } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -172,7 +173,11 @@ export function NotificationSettingsSection() {
       className="space-y-6"
     >
       <div>
-        <h2 id="notifications-title" className="text-xl font-semibold">
+        <h2
+          id="notifications-title"
+          className="flex items-center gap-2 text-xl font-semibold"
+        >
+          <Bell aria-hidden="true" className="size-5 shrink-0" />
           Уведомления
         </h2>
         <p className="mt-2 text-muted-foreground">
@@ -187,6 +192,7 @@ export function NotificationSettingsSection() {
             {error}
           </p>
           <Button onClick={() => setRevision((value) => value + 1)}>
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </div>
@@ -281,6 +287,7 @@ export function NotificationSettingsSection() {
           )}
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={busy !== null}>
+              <Save aria-hidden="true" className="size-4 shrink-0" />
               {busy === 'save' ? 'Сохраняем…' : 'Сохранить настройки'}
             </Button>
             <Button
@@ -289,6 +296,7 @@ export function NotificationSettingsSection() {
               disabled={busy !== null || !saved?.chatId || dirty}
               onClick={() => void test()}
             >
+              <Send aria-hidden="true" className="size-4 shrink-0" />
               {busy === 'test' ? 'Отправляем…' : 'Тест уведомлений'}
             </Button>
           </div>

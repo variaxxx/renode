@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -22,6 +23,7 @@ export function ProtectedRoute() {
             {error}
           </p>
           <Button className="mt-6" onClick={() => void restore()}>
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </section>

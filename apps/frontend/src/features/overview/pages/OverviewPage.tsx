@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -134,6 +135,7 @@ export function OverviewPage() {
           disabled={loading}
           onClick={() => setRevision((value) => value + 1)}
         >
+          <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
           Обновить
         </Button>
       </div>
@@ -151,6 +153,7 @@ export function OverviewPage() {
             variant="outline"
             onClick={() => setRevision((value) => value + 1)}
           >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </section>

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Copy, Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react'
+import {
+  Copy,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  Pencil,
+  Save,
+  X,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -252,6 +261,7 @@ function ProviderSecretDialog({ providerId, onClose, onSaved }: DialogProps) {
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
+            <X aria-hidden="true" className="size-4 shrink-0" />
             Закрыть
           </Button>
           <Button onClick={() => void load()}>Повторить</Button>
@@ -348,9 +358,11 @@ function ProviderSecretDialog({ providerId, onClose, onSaved }: DialogProps) {
               disabled={pending}
               onClick={() => (encrypted ? setEditMode(false) : onClose())}
             >
+              <X aria-hidden="true" className="size-4 shrink-0" />
               Отмена
             </Button>
             <Button type="submit" disabled={pending || !password}>
+              <Save aria-hidden="true" className="size-4 shrink-0" />
               {pending ? 'Сохраняем…' : 'Сохранить'}
             </Button>
           </>
@@ -362,6 +374,7 @@ function ProviderSecretDialog({ providerId, onClose, onSaved }: DialogProps) {
               disabled={pending}
               onClick={() => setEditMode(true)}
             >
+              <Pencil aria-hidden="true" className="size-4 shrink-0" />
               Изменить пароль
             </Button>
             <Button

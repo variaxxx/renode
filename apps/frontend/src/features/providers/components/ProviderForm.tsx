@@ -1,3 +1,4 @@
+import { Save, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -108,6 +109,7 @@ export function ProviderForm({
       )}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={pending}>
+          <Save aria-hidden="true" className="size-4 shrink-0" />
           {pending
             ? 'Сохраняем…'
             : editing
@@ -120,6 +122,7 @@ export function ProviderForm({
           disabled={pending}
           onClick={onCancel}
         >
+          <X aria-hidden="true" className="size-4 shrink-0" />
           Отмена
         </Button>
       </div>

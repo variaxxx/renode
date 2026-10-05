@@ -1,5 +1,5 @@
+import { Globe2, MoreHorizontal, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -75,6 +75,7 @@ export function ProviderList({
           {error}
         </p>
         <Button variant="outline" className="mt-4" onClick={onRetry}>
+          <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
           Повторить
         </Button>
       </section>
@@ -83,6 +84,10 @@ export function ProviderList({
   if (providers.length === 0)
     return (
       <section className="mt-8 rounded-xl border border-border bg-card p-8 text-center">
+        <Globe2
+          aria-hidden="true"
+          className="mx-auto mb-4 size-8 text-muted-foreground"
+        />
         <h2 className="text-lg font-medium">Провайдеров пока нет</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Добавьте первого провайдера, чтобы вести каталог серверов.
@@ -183,6 +188,7 @@ export function ProviderList({
                 if (confirming) void handleDelete(confirming)
               }}
             >
+              <Trash2 aria-hidden="true" className="size-4 shrink-0" />
               {deleting ? 'Удаляем…' : 'Подтвердить удаление'}
             </Button>
           </AlertDialogFooter>

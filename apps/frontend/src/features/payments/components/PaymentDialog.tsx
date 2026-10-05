@@ -1,3 +1,4 @@
+import { CreditCard, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -167,6 +168,7 @@ export function PaymentDialog({
           )}
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={pending || !confirmed}>
+              <CreditCard aria-hidden="true" className="size-4 shrink-0" />
               {pending ? 'Сохраняем…' : 'Подтвердить платёж'}
             </Button>
             <Button
@@ -175,6 +177,7 @@ export function PaymentDialog({
               disabled={pending}
               onClick={onClose}
             >
+              <X aria-hidden="true" className="size-4 shrink-0" />
               Отмена
             </Button>
           </div>

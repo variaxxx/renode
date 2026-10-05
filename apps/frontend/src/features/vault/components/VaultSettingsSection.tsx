@@ -1,3 +1,11 @@
+import {
+  KeyRound,
+  LockKeyhole,
+  RefreshCw,
+  ShieldCheck,
+  ShieldPlus,
+  UnlockKeyhole,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,11 +81,16 @@ export function VaultSettingsSection() {
   return (
     <section id="vault" aria-labelledby="vault-title">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 id="vault-title" className="text-xl font-semibold">
+        <h2
+          id="vault-title"
+          className="flex items-center gap-2 text-xl font-semibold"
+        >
+          <ShieldCheck aria-hidden="true" className="size-5 shrink-0" />
           Хранилище паролей
         </h2>
         {unlocked && (
           <Button variant="outline" onClick={handleLock}>
+            <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
             Заблокировать хранилище
           </Button>
         )}
@@ -104,6 +117,7 @@ export function VaultSettingsSection() {
               setReload((value) => value + 1)
             }}
           >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
             Повторить
           </Button>
         </section>
@@ -128,6 +142,7 @@ export function VaultSettingsSection() {
                 подтвердите сохранение.
               </p>
               <Button className="mt-5" onClick={() => selectMode('setup')}>
+                <ShieldPlus aria-hidden="true" className="size-4 shrink-0" />
                 Создать хранилище
               </Button>
             </>
@@ -139,16 +154,22 @@ export function VaultSettingsSection() {
                     variant="outline"
                     onClick={() => selectMode('unlock')}
                   >
+                    <UnlockKeyhole
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
                     Разблокировать хранилище
                   </Button>
                 )}
                 <Button variant="outline" onClick={() => selectMode('master')}>
+                  <KeyRound aria-hidden="true" className="size-4 shrink-0" />
                   Сменить мастер-пароль
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => selectMode('recovery')}
                 >
+                  <KeyRound aria-hidden="true" className="size-4 shrink-0" />
                   Восстановить по резервному ключу
                 </Button>
               </div>

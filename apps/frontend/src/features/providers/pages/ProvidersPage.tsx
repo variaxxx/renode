@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -92,6 +93,7 @@ export function ProvidersPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold">Провайдеры</h1>
         <Button onClick={() => openEditor({ kind: 'create' })}>
+          <Plus aria-hidden="true" className="size-4 shrink-0" />
           Добавить провайдера
         </Button>
       </div>

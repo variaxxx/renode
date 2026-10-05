@@ -1,3 +1,4 @@
+import { LogIn } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,7 @@ export function LoginPage() {
             </p>
           )}
           <Button className="w-full" type="submit" disabled={pending}>
+            <LogIn aria-hidden="true" className="size-4 shrink-0" />
             {pending ? 'Входим…' : 'Войти'}
           </Button>
         </form>
