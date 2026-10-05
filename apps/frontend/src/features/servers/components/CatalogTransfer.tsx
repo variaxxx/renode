@@ -1,3 +1,5 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { useLocalPagination } from '@/shared/lib/pagination'
 import { Disclosure } from '@/components/ui/disclosure'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -27,13 +29,13 @@ const fields = [
 ] as const
 /** Preview and import a CSV catalog without credentials or payment history. */
 export function CatalogTransfer({
-  servers,
+  loadExport,
   disabled,
   providers,
   onImported,
 }: {
   disabled: boolean
-  servers: Server[]
+  loadExport: () => Promise<Server[]>
   providers: Provider[]
   onImported: () => void
 }) {
@@ -42,14 +44,30 @@ export function CatalogTransfer({
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
   const [providerId, setProviderId] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const previewPage = useLocalPagination(draft, draft)
   /** Export only ordinary inventory fields for the filtered catalog. */
-  function exportServers() {
-    downloadCsv('renode-servers.csv', [
-      fields as unknown as string[],
-      ...servers.map((s) =>
-        fields.map((k) => (k === 'tags' ? JSON.stringify(s.tags) : s[k])),
-      ),
-    ])
+  async function exportServers() {
+    if (exporting) return
+    setExporting(true)
+    setError('')
+    try {
+      const servers = await loadExport()
+      downloadCsv('renode-servers.csv', [
+        fields as unknown as string[],
+        ...servers.map((s) =>
+          fields.map((k) => (k === 'tags' ? JSON.stringify(s.tags) : s[k])),
+        ),
+      ])
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Не удалось экспортировать серверы.',
+      )
+    } finally {
+      setExporting(false)
+    }
   }
   /** Parse the entire CSV and show a preview before any write. */
   async function preview(file: File | undefined) {
@@ -136,8 +154,12 @@ export function CatalogTransfer({
           включаются. Импорт создаёт новые активные записи; повторный импорт
           создаст копии.
         </p>
-        <Button variant="outline" disabled={disabled} onClick={exportServers}>
-          Экспорт серверов
+        <Button
+          variant="outline"
+          disabled={disabled || exporting}
+          onClick={() => void exportServers()}
+        >
+          {exporting ? 'Экспортируем…' : 'Экспорт серверов'}
         </Button>
         <label className="flex flex-col gap-3 text-sm">
           <span>CSV из экспорта (до 500 строк)</span>
@@ -171,12 +193,18 @@ export function CatalogTransfer({
               сроки.
             </p>
             <ul className="max-h-40 overflow-auto">
-              {draft.map((s, i) => (
+              {previewPage.result.items.map((s, i) => (
                 <li key={i}>
                   {s.name} · {s.cost} {s.currency} · {s.nextPaymentDate}
                 </li>
               ))}
             </ul>
+            <Pagination
+              result={previewPage.result}
+              onChange={previewPage.change}
+              label="Предпросмотр импорта"
+              disabled={pending}
+            />
             <Button disabled={pending} onClick={() => void submit()}>
               {pending ? 'Импортируем…' : 'Подтвердить импорт'}
             </Button>

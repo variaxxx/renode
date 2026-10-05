@@ -1,3 +1,9 @@
+import {
+  allPages,
+  pageParams,
+  type Page,
+  type PageQuery,
+} from '@/shared/api/pagination'
 import { apiRequest } from '@/shared/api/client'
 import type { Currency } from '@/features/servers/api/servers'
 
@@ -49,9 +55,13 @@ export function recordPayment(
 /** Load immutable payment snapshots for one server. */
 export function listPayments(
   id: string,
+  query: PageQuery,
   signal?: AbortSignal,
-): Promise<Payment[]> {
-  return apiRequest(`/servers/${encodeURIComponent(id)}/payments`, { signal })
+): Promise<Page<Payment>> {
+  return apiRequest(
+    `/servers/${encodeURIComponent(id)}/payments?${pageParams(query)}`,
+    { signal },
+  )
 }
 
 /** Load deadlines and exact totals without converting currencies. */
@@ -78,16 +88,26 @@ export type LedgerPayment = Payment & {
   providerName: string
   project: string | null
 }
-/** Load the global ledger with optional filters. */
+/** Load one page of the filtered payment ledger. */
 export function getLedger(
+  filters: Record<string, string>,
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<LedgerPayment>> {
+  const params = pageParams(query)
+  for (const [key, value] of Object.entries(filters))
+    if (value) params.set(key, value)
+  return apiRequest(`/payments?${params}`, { signal })
+}
+
+/** Export every matching payment rather than only the visible page. */
+export function listLedger(
   filters: Record<string, string>,
   signal?: AbortSignal,
 ): Promise<LedgerPayment[]> {
-  const params = new URLSearchParams(
-    Object.entries(filters).filter(([, v]) => v),
-  )
-  return apiRequest(`/payments?${params}`, { signal })
+  return allPages((query) => getLedger(filters, query, signal))
 }
+
 /** Retain the original payment and record a cancellation reason. */
 export function cancelPayment(
   id: string,

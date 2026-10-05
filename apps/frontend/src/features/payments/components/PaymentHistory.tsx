@@ -1,3 +1,6 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { emptyPage, usePageQuery } from '@/shared/lib/pagination'
+import type { Page } from '@/shared/api/pagination'
 import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -12,7 +15,9 @@ export function PaymentHistory({
   serverId: string
   revision: number
 }) {
-  const [payments, setPayments] = useState<Payment[]>([])
+  const { query, change } = usePageQuery(`${serverId}:${revision}`)
+  const [result, setResult] = useState<Page<Payment>>(emptyPage)
+  const payments = result.items
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -24,8 +29,8 @@ export function PaymentHistory({
       setLoading(true)
       setError('')
       try {
-        const result = await listPayments(serverId, controller.signal)
-        if (active) setPayments(result)
+        const page = await listPayments(serverId, query, controller.signal)
+        if (active) setResult(page)
       } catch (failure) {
         if (active)
           setError(
@@ -42,7 +47,7 @@ export function PaymentHistory({
       active = false
       controller.abort()
     }
-  }, [serverId, revision, retry])
+  }, [serverId, revision, retry, query])
   return (
     <section className="rounded-xl border border-border bg-card p-6">
       <h2 className="text-lg font-semibold">История платежей</h2>
@@ -107,6 +112,14 @@ export function PaymentHistory({
             </tbody>
           </table>
         </div>
+      )}
+      {!error && (
+        <Pagination
+          result={result}
+          onChange={change}
+          label="История платежей"
+          disabled={loading}
+        />
       )}
     </section>
   )

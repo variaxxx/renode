@@ -1,3 +1,6 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { emptyPage, useUrlPagination } from '@/shared/lib/pagination'
+import type { Page } from '@/shared/api/pagination'
 import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -11,7 +14,7 @@ import {
 import {
   createProvider,
   deleteProvider,
-  listProviders,
+  getProviderPage,
   updateProvider,
   type Provider,
   type ProviderInput,
@@ -21,7 +24,10 @@ import { ProviderList } from '@/features/providers/components/ProviderList'
 
 /** Render the providers section. */
 export function ProvidersPage() {
-  const [providers, setProviders] = useState<Provider[]>([])
+  const { query, change } = useUrlPagination()
+  const [result, setResult] = useState<Page<Provider>>(emptyPage)
+  const providers = result.items
+  const [revision, setRevision] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editor, setEditor] = useState<
@@ -38,52 +44,52 @@ export function ProvidersPage() {
   }
 
   /** Refresh the catalog after entry or a failed request. */
-  const loadProviders = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      setProviders(await listProviders())
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : 'Не удалось загрузить провайдеров.',
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const loadProviders = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true)
+      setError('')
+      try {
+        const page = await getProviderPage(query, signal)
+        if (!signal?.aborted) setResult(page)
+      } catch (failure) {
+        if (signal?.aborted) return
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : 'Не удалось загрузить провайдеров.',
+        )
+      } finally {
+        if (!signal?.aborted) setLoading(false)
+      }
+    },
+    [query],
+  )
 
   useEffect(() => {
-    void loadProviders()
-  }, [loadProviders])
+    const controller = new AbortController()
+    void loadProviders(controller.signal)
+    return () => controller.abort()
+  }, [loadProviders, revision])
 
-  /** Add a saved provider to the visible catalog. */
+  /** Refresh sorted pages after creating a provider. */
   async function handleCreate(input: ProviderInput) {
-    const provider = await createProvider(input)
-    setProviders((current) =>
-      [...current, provider].sort((left, right) =>
-        left.name.localeCompare(right.name, 'ru'),
-      ),
-    )
+    await createProvider(input)
     setEditorOpen(false)
+    change(1)
+    setRevision((value) => value + 1)
   }
 
-  /** Replace the updated provider in the visible catalog. */
+  /** Reload the page after a provider changes its sort position. */
   async function handleUpdate(provider: Provider, input: ProviderInput) {
-    const updated = await updateProvider(provider.id, input)
-    setProviders((current) =>
-      current
-        .map((item) => (item.id === updated.id ? updated : item))
-        .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
-    )
+    await updateProvider(provider.id, input)
     setEditorOpen(false)
+    setRevision((value) => value + 1)
   }
 
-  /** Remove a deleted provider from the visible catalog. */
+  /** Reload and clamp navigation after deleting the last item on a page. */
   async function handleDelete(provider: Provider) {
     await deleteProvider(provider.id)
-    setProviders((current) => current.filter((item) => item.id !== provider.id))
+    setRevision((value) => value + 1)
     if (editor?.kind === 'edit' && editor.provider.id === provider.id)
       setEditorOpen(false)
   }
@@ -132,6 +138,14 @@ export function ProvidersPage() {
         onEdit={(provider) => openEditor({ kind: 'edit', provider })}
         onDelete={handleDelete}
       />
+      {!error && (
+        <Pagination
+          result={result}
+          onChange={change}
+          label="Провайдеры"
+          disabled={loading}
+        />
+      )}
     </div>
   )
 }

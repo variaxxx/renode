@@ -1,3 +1,9 @@
+import {
+  allPages,
+  pageParams,
+  type Page,
+  type PageQuery,
+} from '@/shared/api/pagination'
 import { apiRequest } from '@/shared/api/client'
 
 export type ServerStatus = 'ACTIVE' | 'ARCHIVED'
@@ -55,16 +61,25 @@ export type ServerFilters = {
   projectOrTag: string
 }
 
-/** Load servers matching the visible catalog filters. */
+/** Load one bounded page matching the visible catalog filters. */
+export function getServerPage(
+  filters: ServerFilters,
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<Server>> {
+  const params = pageParams(query)
+  for (const [key, value] of Object.entries(filters)) {
+    if (value.trim()) params.set(key, value.trim())
+  }
+  return apiRequest(`/servers?${params}`, { signal })
+}
+
+/** Read the complete filtered catalog for aggregates and CSV exports. */
 export function listServers(
   filters: ServerFilters,
   signal?: AbortSignal,
 ): Promise<Server[]> {
-  const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(filters)) {
-    if (value.trim()) params.set(key, value.trim())
-  }
-  return apiRequest<Server[]>(`/servers?${params.toString()}`, { signal })
+  return allPages((query) => getServerPage(filters, query, signal))
 }
 
 /** Load one server card by its identifier. */

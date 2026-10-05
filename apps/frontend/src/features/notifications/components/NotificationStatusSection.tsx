@@ -1,9 +1,16 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { emptyPage, usePageQuery } from '@/shared/lib/pagination'
+import type { Page } from '@/shared/api/pagination'
 import { Disclosure } from '@/components/ui/disclosure'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import {
   getNotificationStatus,
+  getNotificationDeliveries,
+  getUpcomingReminders,
+  type NotificationDelivery,
+  type UpcomingReminder,
   type NotificationStatus,
 } from '../api/notifications'
 import { displayPaymentDate } from '@/features/payments/lib/dates'
@@ -81,60 +88,158 @@ export function NotificationStatusSection() {
               </span>
             ))}
           </div>
-          <Disclosure title={<> Ближайшие напоминания (до 20) </>}>
-            <ul className="mt-3 max-h-80 overflow-auto divide-y divide-border">
-              {data.upcoming.map((e) => (
-                <li
-                  key={`${e.serverId}-${e.eventType}-${e.eventDate}-${e.interval}`}
-                  className="py-3"
-                >
-                  <Link className="underline" to={`/servers/${e.serverId}`}>
-                    {e.serverName}
-                  </Link>
-                  <p>
-                    {events[e.eventType]} · {displayPaymentDate(e.eventDate)} ·
-                    за {e.interval} дн.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Отправка:{' '}
-                    {new Date(e.scheduledAt).toLocaleString('ru-RU', {
-                      timeZone: data.timezone,
-                    })}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            {data.upcoming.length === 0 && <p>Будущих напоминаний нет.</p>}
-          </Disclosure>
-          <Disclosure title={<> Последние события (до 50) </>}>
-            <ul className="mt-3 max-h-96 overflow-auto divide-y divide-border">
-              {data.deliveries.map((d) => (
-                <li className="py-3 space-y-1" key={d.id}>
-                  <Link className="underline" to={`/servers/${d.serverId}`}>
-                    {d.serverName}
-                  </Link>
-                  <p>
-                    {events[d.eventType]} · {displayPaymentDate(d.eventDate)} ·{' '}
-                    {statuses[d.status]} · попыток: {d.attempts}
-                  </p>
-                  {d.status === 'RETRY' && (
-                    <p className="text-sm">
-                      Следующая попытка:{' '}
-                      {new Date(d.nextAttemptAt).toLocaleString('ru-RU', {
-                        timeZone: data.timezone,
-                      })}
-                    </p>
-                  )}
-                  {d.lastError && (
-                    <p className="text-red-400 text-sm">{d.lastError}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {data.deliveries.length === 0 && <p>Событий пока нет.</p>}
-          </Disclosure>
+          <NotificationList
+            mode="upcoming"
+            timezone={data.timezone}
+            revision={revision}
+          />
+          <NotificationList
+            mode="deliveries"
+            timezone={data.timezone}
+            revision={revision}
+          />
         </>
       )}
     </section>
+  )
+}
+
+/** Load independent pages for future reminders and the complete delivery history. */
+function NotificationList({
+  mode,
+  timezone,
+  revision,
+}: {
+  mode: 'upcoming' | 'deliveries'
+  timezone: string
+  revision: number
+}) {
+  const { query, change } = usePageQuery(`${mode}:${revision}`)
+  const [result, setResult] =
+    useState<Page<UpcomingReminder | NotificationDelivery>>(emptyPage)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const title =
+    mode === 'upcoming' ? 'Ближайшие напоминания' : 'История доставки'
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
+    setError('')
+    const request =
+      mode === 'upcoming'
+        ? getUpcomingReminders(query, controller.signal)
+        : getNotificationDeliveries(query, controller.signal)
+    void request
+      .then((page) => {
+        if (!controller.signal.aborted) setResult(page)
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : 'Не удалось загрузить список.',
+          )
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
+  }, [mode, query, revision, retry])
+  return (
+    <Disclosure
+      title={
+        <>
+          {title} ({result.total})
+        </>
+      }
+    >
+      {loading ? (
+        <p role="status" className="mt-3 text-muted-foreground">
+          Загружаем…
+        </p>
+      ) : error ? (
+        <div className="mt-3 space-y-3">
+          <p role="alert" className="text-red-400">
+            {error}
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            Повторить
+          </Button>
+        </div>
+      ) : (
+        <>
+          <ul className="mt-3 divide-y divide-border">
+            {result.items.map((item) => (
+              <li
+                key={
+                  'id' in item
+                    ? item.id
+                    : `${item.serverId}-${item.eventType}-${item.eventDate}-${item.interval}`
+                }
+                className="py-3 space-y-1"
+              >
+                <Link className="underline" to={`/servers/${item.serverId}`}>
+                  {item.serverName}
+                </Link>
+                {'status' in item ? (
+                  <>
+                    <p>
+                      {events[item.eventType]} ·{' '}
+                      {displayPaymentDate(item.eventDate)} ·{' '}
+                      {statuses[item.status]} · попыток: {item.attempts}
+                    </p>
+                    {item.status === 'RETRY' && (
+                      <p className="text-sm">
+                        Следующая попытка:{' '}
+                        {new Date(item.nextAttemptAt).toLocaleString('ru-RU', {
+                          timeZone: timezone,
+                        })}
+                      </p>
+                    )}
+                    {item.lastError && (
+                      <p className="text-red-400 text-sm">{item.lastError}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      {events[item.eventType]} ·{' '}
+                      {displayPaymentDate(item.eventDate)} · за {item.interval}{' '}
+                      дн.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Отправка:{' '}
+                      {new Date(item.scheduledAt).toLocaleString('ru-RU', {
+                        timeZone: timezone,
+                      })}
+                    </p>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          {result.total === 0 && (
+            <p className="mt-3">
+              {mode === 'upcoming'
+                ? 'Будущих напоминаний нет.'
+                : 'Событий пока нет.'}
+            </p>
+          )}
+        </>
+      )}
+      {!error && (
+        <Pagination
+          result={result}
+          onChange={change}
+          label={title}
+          disabled={loading}
+        />
+      )}
+    </Disclosure>
   )
 }

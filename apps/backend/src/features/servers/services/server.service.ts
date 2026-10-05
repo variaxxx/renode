@@ -17,7 +17,7 @@ export class ServerService {
   constructor(private readonly servers: ServerRepository) {}
 
   /** Return servers matching the requested catalog filters. */
-  async list(filters: ServerFilters): Promise<Server[]> {
+  async list(filters: ServerFilters) {
     return this.servers.findAll(filters)
   }
 

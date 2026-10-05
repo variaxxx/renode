@@ -1,3 +1,4 @@
+import { readPage, type PaginationDto } from '../../../common/pagination'
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../../infra/prisma/prisma.service'
 import type {
@@ -11,10 +12,17 @@ export class ProviderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** List providers in a stable display order. */
-  async findAll(): Promise<Provider[]> {
-    return this.prisma.provider.findMany({
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
-    })
+  async findAll(query: PaginationDto) {
+    return readPage(
+      this.prisma,
+      query,
+      (tx) => tx.provider.count(),
+      (tx, range) =>
+        tx.provider.findMany({
+          ...range,
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        }),
+    )
   }
 
   /** Persist a validated provider. */

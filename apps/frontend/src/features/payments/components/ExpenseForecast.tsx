@@ -1,3 +1,5 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { useLocalPagination } from '@/shared/lib/pagination'
 import { Disclosure } from '@/components/ui/disclosure'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -9,6 +11,8 @@ export function ExpenseForecast({ revision }: { revision: number }) {
   const [data, setData] = useState<Forecast | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const eventPages = useLocalPagination(data?.events ?? [], data)
+  const monthPages = useLocalPagination(data?.months ?? [], data)
   useEffect(() => {
     const controller = new AbortController()
     setData(null)
@@ -79,7 +83,7 @@ export function ExpenseForecast({ revision }: { revision: number }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.months.map((m) => (
+                  {monthPages.result.items.map((m) => (
                     <tr key={m.month} className="border-t border-border">
                       {[m.month, m.RUB, m.USD, m.EUR].map((t, i) => (
                         <td
@@ -94,12 +98,17 @@ export function ExpenseForecast({ revision }: { revision: number }) {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              result={monthPages.result}
+              onChange={monthPages.change}
+              label="Прогноз по месяцам"
+            />
           </Disclosure>
           <Disclosure
             title={<> Календарь будущих оплат ({data.events.length}) </>}
           >
             <ul className="max-h-80 overflow-y-auto divide-y divide-border">
-              {data.events.map((e) => (
+              {eventPages.result.items.map((e) => (
                 <li
                   key={`${e.serverId}-${e.date}`}
                   className="py-3 flex flex-wrap justify-between gap-3"
@@ -118,6 +127,11 @@ export function ExpenseForecast({ revision }: { revision: number }) {
                 </li>
               ))}
             </ul>
+            <Pagination
+              result={eventPages.result}
+              onChange={eventPages.change}
+              label="Календарь будущих оплат"
+            />
             {data.events.length === 0 && <p>Будущих оплат нет.</p>}
           </Disclosure>
         </>

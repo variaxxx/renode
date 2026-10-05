@@ -1,3 +1,6 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { emptyPage, useUrlPagination } from '@/shared/lib/pagination'
+import type { Page } from '@/shared/api/pagination'
 import { Plus, RefreshCw, Server as ServerIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
@@ -16,6 +19,7 @@ import {
 } from '@/features/providers/api/providers'
 import {
   createServer,
+  getServerPage,
   listServers,
   type Server,
   type ServerFilters,
@@ -33,7 +37,9 @@ export function ServersPage() {
   const navigate = useNavigate()
   const [providers, setProviders] = useState<Provider[]>([])
   const [providersError, setProvidersError] = useState('')
-  const [servers, setServers] = useState<Server[]>([])
+  const { query, change } = useUrlPagination()
+  const [result, setResult] = useState<Page<Server>>(emptyPage)
+  const servers = result.items
   const [searchParams, setSearchParams] = useSearchParams()
   const filters = useMemo<ServerFilters>(
     () => ({
@@ -83,7 +89,8 @@ export function ServersPage() {
       setLoading(true)
       setError('')
       try {
-        setServers(await listServers(filters, controller.signal))
+        const page = await getServerPage(filters, query, controller.signal)
+        if (!controller.signal.aborted) setResult(page)
       } catch (failure) {
         if (!controller.signal.aborted)
           setError(
@@ -99,7 +106,7 @@ export function ServersPage() {
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [filters, refreshKey])
+  }, [filters, query, refreshKey])
 
   const providerNames = useMemo(
     () => new Map(providers.map((provider) => [provider.id, provider.name])),
@@ -114,6 +121,7 @@ export function ServersPage() {
     setLoading(true)
     const params = new URLSearchParams(searchParams)
     params.set(key, value ?? 'name')
+    params.set('page', '1')
     setSearchParams(params, { replace: true })
   }
 
@@ -238,7 +246,7 @@ export function ServersPage() {
       <CatalogTransfer
         providers={providers}
         disabled={loading || !!error}
-        servers={servers}
+        loadExport={() => listServers(filters)}
         onImported={() => {
           setRefreshKey((v) => v + 1)
           void loadProviders()
@@ -344,6 +352,14 @@ export function ServersPage() {
             </li>
           ))}
         </ul>
+      )}
+      {!error && (
+        <Pagination
+          result={result}
+          onChange={change}
+          label="Серверы"
+          disabled={loading}
+        />
       )}
     </div>
   )

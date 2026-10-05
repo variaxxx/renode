@@ -1,3 +1,4 @@
+import { readPage } from '../../../common/pagination'
 import { ServerError, ServerNotFoundError } from '../server.errors'
 import { Injectable } from '@nestjs/common'
 import { Prisma, ServerStatus } from '../../../generated/prisma/client'
@@ -14,7 +15,7 @@ export class ServerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Find servers using catalog filters in a stable order. */
-  async findAll(filters: ServerFilters): Promise<Server[]> {
+  async findAll(filters: ServerFilters) {
     const where: Prisma.ServerWhereInput = {
       providerId: filters.providerId,
       status: filters.status,
@@ -36,19 +37,29 @@ export class ServerRepository {
           ]
         : undefined,
     }
-    return this.prisma.server.findMany({
-      where,
-      orderBy:
-        filters.sort === 'payment'
-          ? [{ nextPaymentDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }]
-          : filters.sort === 'costAsc' || filters.sort === 'costDesc'
-            ? [
-                { currency: 'asc' },
-                { cost: filters.sort === 'costAsc' ? 'asc' : 'desc' },
-                { id: 'asc' },
-              ]
-            : [{ name: 'asc' }, { id: 'asc' }],
-    })
+    return readPage(
+      this.prisma,
+      filters,
+      (tx) => tx.server.count({ where }),
+      (tx, range) =>
+        tx.server.findMany({
+          where,
+          ...range,
+          orderBy:
+            filters.sort === 'payment'
+              ? [
+                  { nextPaymentDate: { sort: 'asc', nulls: 'last' } },
+                  { id: 'asc' },
+                ]
+              : filters.sort === 'costAsc' || filters.sort === 'costDesc'
+                ? [
+                    { currency: 'asc' },
+                    { cost: filters.sort === 'costAsc' ? 'asc' : 'desc' },
+                    { id: 'asc' },
+                  ]
+                : [{ name: 'asc' }, { id: 'asc' }],
+        }),
+    )
   }
 
   /** Find one server by its stable identifier. */

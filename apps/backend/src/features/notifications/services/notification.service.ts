@@ -1,3 +1,4 @@
+import type { PaginationDto } from '../../../common/pagination'
 import { Injectable } from '@nestjs/common'
 import { NotificationError } from '../notification.errors'
 import {
@@ -58,6 +59,16 @@ export class NotificationService {
   /** Expose safe worker and delivery diagnostics. */
   status() {
     return this.repository.status()
+  }
+
+  /** Read one page of delivery history. */
+  deliveries(query: PaginationDto) {
+    return this.repository.deliveries(query)
+  }
+
+  /** Read one page of future reminders. */
+  upcoming(query: PaginationDto) {
+    return this.repository.upcoming(query)
   }
 
   /** Send a test using only the owner's persisted destination. */

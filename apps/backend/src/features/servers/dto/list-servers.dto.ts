@@ -6,9 +6,10 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator'
+import { PaginationDto } from '../../../common/pagination'
 import { ServerStatus } from '../../../generated/prisma/client'
 
-export class ListServersDto {
+export class ListServersDto extends PaginationDto {
   @IsOptional()
   @IsIn(['name', 'payment', 'costAsc', 'costDesc'])
   sort?: 'name' | 'payment' | 'costAsc' | 'costDesc'

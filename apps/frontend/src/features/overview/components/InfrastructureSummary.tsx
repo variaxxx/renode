@@ -1,3 +1,5 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { useLocalPagination } from '@/shared/lib/pagination'
 import {
   Archive,
   ArrowRight,
@@ -49,6 +51,11 @@ export function InfrastructureSummary({ servers, providers, asOfDate }: Props) {
         left.date.localeCompare(right.date) ||
         left.server.name.localeCompare(right.server.name),
     )
+  const providerPages = useLocalPagination(distribution, servers)
+  const deadlinePages = useLocalPagination(
+    deadlines,
+    `${asOfDate}:${servers.map((server) => server.updatedAt).join(',')}`,
+  )
   const metrics = [
     {
       label: 'Активные серверы',
@@ -120,7 +127,7 @@ export function InfrastructureSummary({ servers, providers, asOfDate }: Props) {
             </p>
           ) : (
             <ul className="mt-5 space-y-4">
-              {distribution.map((provider) => (
+              {providerPages.result.items.map((provider) => (
                 <li key={provider.id}>
                   <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                     <Link
@@ -148,6 +155,11 @@ export function InfrastructureSummary({ servers, providers, asOfDate }: Props) {
               ))}
             </ul>
           )}
+          <Pagination
+            result={providerPages.result}
+            onChange={providerPages.change}
+            label="Серверы по провайдерам"
+          />
         </section>
         <section className="min-w-0 rounded-xl border border-border bg-card p-6">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -164,7 +176,7 @@ export function InfrastructureSummary({ servers, providers, asOfDate }: Props) {
             </p>
           ) : (
             <ul className="mt-3 max-h-72 divide-y divide-border overflow-y-auto">
-              {deadlines.map(({ server, date, label }) => (
+              {deadlinePages.result.items.map(({ server, date, label }) => (
                 <li
                   key={`${server.id}-${label}`}
                   className="flex flex-wrap items-center justify-between gap-2 py-3"
@@ -194,6 +206,11 @@ export function InfrastructureSummary({ servers, providers, asOfDate }: Props) {
               ))}
             </ul>
           )}
+          <Pagination
+            result={deadlinePages.result}
+            onChange={deadlinePages.change}
+            label="Сроки аренды и отмены"
+          />
         </section>
       </div>
     </>

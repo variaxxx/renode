@@ -1,3 +1,4 @@
+import { mapPage } from '../../../common/pagination'
 import {
   Body,
   Controller,
@@ -26,7 +27,10 @@ export class ServerController {
   @Get()
   @Header('Cache-Control', 'no-store')
   async list(@Query() filters: ListServersDto) {
-    return (await this.servers.list(filters)).map(ServerResponseDto.fromServer)
+    return mapPage(
+      await this.servers.list(filters),
+      ServerResponseDto.fromServer,
+    )
   }
 
   /** Return one server card. */

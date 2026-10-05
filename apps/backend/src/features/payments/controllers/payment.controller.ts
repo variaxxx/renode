@@ -1,3 +1,4 @@
+import { mapPage, PaginationDto } from '../../../common/pagination'
 import {
   Body,
   Controller,
@@ -35,8 +36,14 @@ export class PaymentController {
   /** Return the server's payment snapshots. */
   @Get('servers/:id/payments')
   @Header('Cache-Control', 'no-store')
-  async history(@Param('id', ParseUUIDPipe) id: string) {
-    return (await this.payments.history(id)).map(PaymentResponseDto.fromPayment)
+  async history(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: PaginationDto,
+  ) {
+    return mapPage(
+      await this.payments.history(id, query),
+      PaymentResponseDto.fromPayment,
+    )
   }
 
   /** Return actual hosting expenses grouped by month and currency. */
@@ -63,7 +70,7 @@ export class PaymentController {
   @Get('payments')
   @Header('Cache-Control', 'no-store')
   async list(@Query() filters: ListPaymentsDto) {
-    return (await this.payments.list(filters)).map((p) => ({
+    return mapPage(await this.payments.list(filters), (p) => ({
       ...PaymentResponseDto.fromPayment(p),
       serverName: p.server.name,
       providerName: p.server.provider.name,

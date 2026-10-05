@@ -1,3 +1,9 @@
+import {
+  allPages,
+  pageParams,
+  type Page,
+  type PageQuery,
+} from '@/shared/api/pagination'
 import { apiRequest } from '@/shared/api/client'
 
 export type Provider = {
@@ -15,9 +21,17 @@ export type ProviderInput = {
   note: string | null
 }
 
-/** Load the owner's provider catalog. */
-export function listProviders(): Promise<Provider[]> {
-  return apiRequest<Provider[]>('/providers')
+/** Load one page of the provider catalog. */
+export function getProviderPage(
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<Provider>> {
+  return apiRequest(`/providers?${pageParams(query)}`, { signal })
+}
+
+/** Load complete provider choices through bounded API requests. */
+export function listProviders(signal?: AbortSignal): Promise<Provider[]> {
+  return allPages((query) => getProviderPage(query, signal))
 }
 
 /** Create a provider from the owner's form data. */

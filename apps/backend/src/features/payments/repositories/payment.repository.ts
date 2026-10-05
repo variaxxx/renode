@@ -1,3 +1,4 @@
+import { readPage, type PaginationDto } from '../../../common/pagination'
 import { Injectable } from '@nestjs/common'
 import { PaymentError } from '../payment.errors'
 import type { ListPaymentsDto } from '../dto/payment-operations.dto'
@@ -67,11 +68,22 @@ export class PaymentRepository {
   }
 
   /** Return payment snapshots in a deterministic newest-first order. */
-  async history(serverId: string) {
-    return this.prisma.payment.findMany({
-      where: { serverId },
-      orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
-    })
+  async history(serverId: string, query: PaginationDto) {
+    return readPage(
+      this.prisma,
+      query,
+      (tx) => tx.payment.count({ where: { serverId } }),
+      (tx, range) =>
+        tx.payment.findMany({
+          where: { serverId },
+          ...range,
+          orderBy: [
+            { paymentDate: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
+        }),
+    )
   }
 
   /** Fetch recorded expenses within the requested calendar window. */
@@ -104,31 +116,43 @@ export class PaymentRepository {
   }
   /** Filter the global ledger while retaining cancelled snapshots. */
   async list(filters: ListPaymentsDto) {
-    return this.prisma.payment.findMany({
-      where: {
-        paymentDate: {
-          gte: filters.from ? new Date(filters.from) : undefined,
-          lte: filters.to ? new Date(filters.to) : undefined,
-        },
-        currency: filters.currency,
-        server: {
-          providerId: filters.providerId,
-          project: filters.project
-            ? { contains: filters.project, mode: 'insensitive' }
-            : undefined,
-        },
+    const where: Prisma.PaymentWhereInput = {
+      paymentDate: {
+        gte: filters.from ? new Date(filters.from) : undefined,
+        lte: filters.to ? new Date(filters.to) : undefined,
       },
-      include: {
-        server: {
-          select: {
-            name: true,
-            project: true,
-            provider: { select: { name: true } },
+      currency: filters.currency,
+      server: {
+        providerId: filters.providerId,
+        project: filters.project
+          ? { contains: filters.project, mode: 'insensitive' }
+          : undefined,
+      },
+    }
+    return readPage(
+      this.prisma,
+      filters,
+      (tx) => tx.payment.count({ where }),
+      (tx, range) =>
+        tx.payment.findMany({
+          where,
+          ...range,
+          include: {
+            server: {
+              select: {
+                name: true,
+                project: true,
+                provider: { select: { name: true } },
+              },
+            },
           },
-        },
-      },
-      orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
-    })
+          orderBy: [
+            { paymentDate: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
+        }),
+    )
   }
 
   /** Cancel a snapshot and restore the deadline only when it remains applicable. */

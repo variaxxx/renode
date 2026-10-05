@@ -7,9 +7,10 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator'
+import { PaginationDto } from '../../../common/pagination'
 import { Currency } from '../../../generated/prisma/client'
 
-export class ListPaymentsDto {
+export class ListPaymentsDto extends PaginationDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   @Matches(/^\d{4}-\d{2}-\d{2}$/)

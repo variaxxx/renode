@@ -1,3 +1,4 @@
+import { mapPage, PaginationDto } from '../../../common/pagination'
 import {
   Body,
   Controller,
@@ -9,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common'
 import { CreateProviderDto } from '../dto/create-provider.dto'
 import { ProviderResponseDto } from '../dto/provider-response.dto'
@@ -22,8 +24,11 @@ export class ProviderController {
   /** List providers for the signed-in owner. */
   @Get()
   @Header('Cache-Control', 'no-store')
-  async list(): Promise<ProviderResponseDto[]> {
-    return (await this.providers.list()).map(ProviderResponseDto.fromProvider)
+  async list(@Query() query: PaginationDto) {
+    return mapPage(
+      await this.providers.list(query),
+      ProviderResponseDto.fromProvider,
+    )
   }
 
   /** Create a provider from validated catalog fields. */

@@ -1,3 +1,4 @@
+import type { PaginationDto } from '../../../common/pagination'
 import { Injectable } from '@nestjs/common'
 import {
   InvalidProviderError,
@@ -16,8 +17,8 @@ export class ProviderService {
   constructor(private readonly providers: ProviderRepository) {}
 
   /** Return the provider catalog without exposing persistence details. */
-  async list(): Promise<Provider[]> {
-    return this.providers.findAll()
+  async list(query: PaginationDto) {
+    return this.providers.findAll(query)
   }
 
   /** Validate and save a new provider. */

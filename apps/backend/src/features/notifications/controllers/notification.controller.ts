@@ -1,3 +1,4 @@
+import { PaginationDto } from '../../../common/pagination'
 import {
   Body,
   Controller,
@@ -7,6 +8,7 @@ import {
   Post,
   Put,
   Req,
+  Query,
 } from '@nestjs/common'
 import { requireAuth, type AuthenticatedRequest } from '../../auth/auth.request'
 import { NotificationSettingsDto } from '../dto/notification-settings.dto'
@@ -44,6 +46,20 @@ export class NotificationController {
   @Header('Cache-Control', 'no-store')
   status() {
     return this.notifications.status()
+  }
+
+  /** Page recorded deliveries without truncating older history. */
+  @Get('deliveries')
+  @Header('Cache-Control', 'no-store')
+  deliveries(@Query() query: PaginationDto) {
+    return this.notifications.deliveries(query)
+  }
+
+  /** Page all scheduled future reminders. */
+  @Get('upcoming')
+  @Header('Cache-Control', 'no-store')
+  upcoming(@Query() query: PaginationDto) {
+    return this.notifications.upcoming(query)
   }
 
   /** Report success only after Telegram accepts the test message. */

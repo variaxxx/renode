@@ -1,3 +1,5 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { useLocalPagination } from '@/shared/lib/pagination'
 import {
   ArrowRight,
   CalendarDays,
@@ -56,6 +58,7 @@ function DeadlineGroup({
   group: PaymentGroup
   overdue?: boolean
 }) {
+  const pagination = useLocalPagination(group.servers, group)
   return (
     <section className="min-w-0 rounded-xl border border-border bg-card p-6">
       <h2
@@ -76,7 +79,7 @@ function DeadlineGroup({
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-border">
-          {group.servers.map((server) => (
+          {pagination.result.items.map((server) => (
             <li
               key={server.id}
               className="flex flex-wrap items-center justify-between gap-3 py-4"
@@ -102,6 +105,11 @@ function DeadlineGroup({
           ))}
         </ul>
       )}
+      <Pagination
+        result={pagination.result}
+        onChange={pagination.change}
+        label={title}
+      />
     </section>
   )
 }
@@ -128,7 +136,7 @@ export function OverviewPage() {
             { search: '', providerId: '', status: '', projectOrTag: '' },
             controller.signal,
           ),
-          listProviders(),
+          listProviders(controller.signal),
         ])
         if (active) {
           setOverview(result)

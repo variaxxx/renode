@@ -1,3 +1,4 @@
+import type { PaginationDto } from '../../../common/pagination'
 import { NotificationRepository } from '../../notifications/repositories/notification.repository'
 import { calendarDate, advanceMonth } from '../../../common/calendar'
 import { PaymentError } from '../payment.errors'
@@ -43,9 +44,9 @@ export class PaymentService {
   }
 
   /** Require a server before exposing its immutable payment history. */
-  async history(serverId: string) {
+  async history(serverId: string, query: PaginationDto) {
     await this.servers.get(serverId)
-    return this.payments.history(serverId)
+    return this.payments.history(serverId, query)
   }
 
   /** Return the owner's current date without using the browser timezone. */

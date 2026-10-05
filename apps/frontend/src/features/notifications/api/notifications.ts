@@ -1,3 +1,4 @@
+import { pageParams, type Page, type PageQuery } from '@/shared/api/pagination'
 import { apiRequest } from '@/shared/api/client'
 
 export interface NotificationSettings {
@@ -31,16 +32,30 @@ export function testNotification(): Promise<void> {
   return apiRequest('/notifications/test', { method: 'POST' })
 }
 
+export type UpcomingReminder = {
+  serverId: string
+  serverName: string
+  eventType: string
+  eventDate: string
+  interval: number
+  scheduledAt: string
+}
+
+export type NotificationDelivery = {
+  id: string
+  serverId: string
+  serverName: string
+  eventType: string
+  eventDate: string
+  status: string
+  attempts: number
+  nextAttemptAt: string
+  sentAt: string | null
+  lastError: string | null
+}
+
 export type NotificationStatus = {
   timezone: string
-  upcoming: {
-    serverId: string
-    serverName: string
-    eventType: string
-    eventDate: string
-    interval: number
-    scheduledAt: string
-  }[]
   workerAlive: boolean
   heartbeat: {
     lastCycleAt: string
@@ -49,19 +64,26 @@ export type NotificationStatus = {
   } | null
   lastSentAt: string | null
   counts: { status: string; count: number }[]
-  deliveries: {
-    id: string
-    serverId: string
-    serverName: string
-    eventType: string
-    eventDate: string
-    status: string
-    attempts: number
-    nextAttemptAt: string
-    sentAt: string | null
-    lastError: string | null
-  }[]
 }
+
+/** Load one page of scheduled reminders. */
+export function getUpcomingReminders(
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<UpcomingReminder>> {
+  return apiRequest(`/notifications/upcoming?${pageParams(query)}`, { signal })
+}
+
+/** Load one page of delivery history. */
+export function getNotificationDeliveries(
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<NotificationDelivery>> {
+  return apiRequest(`/notifications/deliveries?${pageParams(query)}`, {
+    signal,
+  })
+}
+
 /** Read safe worker diagnostics and recent delivery history. */
 export function getNotificationStatus(
   signal?: AbortSignal,

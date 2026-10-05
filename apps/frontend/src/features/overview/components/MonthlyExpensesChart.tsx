@@ -1,3 +1,5 @@
+import { Pagination } from '@/shared/ui/Pagination'
+import { useLocalPagination } from '@/shared/lib/pagination'
 import { Disclosure } from '@/components/ui/disclosure'
 import { useEffect, useState } from 'react'
 import { ChartColumn, RefreshCw } from 'lucide-react'
@@ -66,6 +68,10 @@ export function MonthlyExpensesChart({ revision }: { revision: number }) {
     })) ?? []
   const money = new Intl.NumberFormat('ru-RU', { style: 'currency', currency })
   const hasPayments = data.some((item) => item.amount > 0)
+  const monthPages = useLocalPagination(
+    data,
+    `${currency}:${expenses?.asOfDate}`,
+  )
 
   return (
     <section
@@ -208,7 +214,7 @@ export function MonthlyExpensesChart({ revision }: { revision: number }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((item) => (
+                  {monthPages.result.items.map((item) => (
                     <tr key={item.month} className="border-b border-border">
                       <th scope="row" className="py-2 font-normal">
                         {monthLabel(item.month)}
@@ -221,6 +227,11 @@ export function MonthlyExpensesChart({ revision }: { revision: number }) {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              result={monthPages.result}
+              onChange={monthPages.change}
+              label="Расходы по месяцам"
+            />
           </Disclosure>
         </>
       )}

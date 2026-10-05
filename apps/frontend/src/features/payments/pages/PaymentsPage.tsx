@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Pagination } from '@/shared/ui/Pagination'
+import { emptyPage, useUrlPagination } from '@/shared/lib/pagination'
+import type { Page } from '@/shared/api/pagination'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getLedger, cancelPayment, type LedgerPayment } from '../api/payments'
+import {
+  getLedger,
+  listLedger,
+  cancelPayment,
+  type LedgerPayment,
+} from '../api/payments'
 import { displayPaymentDate } from '../lib/dates'
 import {
   listProviders,
@@ -18,15 +26,35 @@ import {
 } from '@/components/ui/dialog'
 /** Filter all recorded payments and preserve cancellation audit records. */
 export function PaymentsPage() {
-  const [filters, setFilters] = useState({
-    from: '',
-    to: '',
-    providerId: '',
-    project: '',
-    currency: '',
-  })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo(
+    () => ({
+      from: searchParams.get('from') ?? '',
+      to: searchParams.get('to') ?? '',
+      providerId: searchParams.get('providerId') ?? '',
+      project: searchParams.get('project') ?? '',
+      currency: searchParams.get('currency') ?? '',
+    }),
+    [searchParams],
+  )
+  /** Reset navigation when a ledger filter changes. */
+  function changeFilter(key: keyof typeof filters, value: string) {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        if (value) next.set(key, value)
+        else next.delete(key)
+        next.set('page', '1')
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [providers, setProviders] = useState<Provider[]>([])
-  const [payments, setPayments] = useState<LedgerPayment[]>([])
+  const { query, change } = useUrlPagination()
+  const [result, setResult] = useState<Page<LedgerPayment>>(emptyPage)
+  const payments = result.items
+  const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -38,10 +66,13 @@ export function PaymentsPage() {
     const c = new AbortController()
     setLoading(true)
     setError('')
-    void Promise.all([getLedger(filters, c.signal), listProviders()])
+    void Promise.all([
+      getLedger(filters, query, c.signal),
+      listProviders(c.signal),
+    ])
       .then(([p, r]) => {
         if (!c.signal.aborted) {
-          setPayments(p)
+          setResult(p)
           setProviders(r)
         }
       })
@@ -52,35 +83,49 @@ export function PaymentsPage() {
         if (!c.signal.aborted) setLoading(false)
       })
     return () => c.abort()
-  }, [filters, revision])
+  }, [filters, query, revision])
   /** Export the currently filtered ledger, including cancellation details. */
-  function exportPayments() {
-    downloadCsv('renode-payments.csv', [
-      [
-        'id',
-        'server',
-        'provider',
-        'project',
-        'paymentDate',
-        'amount',
-        'currency',
-        'nextPaymentDate',
-        'cancelledAt',
-        'cancellationReason',
-      ],
-      ...payments.map((p) => [
-        p.id,
-        p.serverName,
-        p.providerName,
-        p.project,
-        p.paymentDate,
-        p.amount,
-        p.currency,
-        p.nextPaymentDate,
-        p.cancelledAt,
-        p.cancellationReason,
-      ]),
-    ])
+  async function exportPayments() {
+    if (exporting) return
+    setExporting(true)
+    setError('')
+    try {
+      const payments = await listLedger(filters)
+      downloadCsv('renode-payments.csv', [
+        [
+          'id',
+          'server',
+          'provider',
+          'project',
+          'paymentDate',
+          'amount',
+          'currency',
+          'nextPaymentDate',
+          'cancelledAt',
+          'cancellationReason',
+        ],
+        ...payments.map((p) => [
+          p.id,
+          p.serverName,
+          p.providerName,
+          p.project,
+          p.paymentDate,
+          p.amount,
+          p.currency,
+          p.nextPaymentDate,
+          p.cancelledAt,
+          p.cancellationReason,
+        ]),
+      ])
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Не удалось экспортировать платежи.',
+      )
+    } finally {
+      setExporting(false)
+    }
   }
   /** Cancel only after the owner supplies a reason and confirms the operation. */
   async function cancel() {
@@ -108,10 +153,10 @@ export function PaymentsPage() {
         <h1 className="text-3xl font-semibold">Платежи</h1>
         <Button
           variant="outline"
-          disabled={loading || !!error}
-          onClick={exportPayments}
+          disabled={loading || !!error || exporting}
+          onClick={() => void exportPayments()}
         >
-          Экспорт CSV
+          {exporting ? 'Экспортируем…' : 'Экспорт CSV'}
         </Button>
       </div>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 rounded-xl border border-border bg-card p-4">
@@ -123,9 +168,9 @@ export function PaymentsPage() {
             <Input
               type={key === 'project' ? 'text' : 'date'}
               value={filters[key]}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, [key]: e.target.value }))
-              }
+              onChange={(e) => {
+                changeFilter(key, e.target.value)
+              }}
             />
           </label>
         ))}
@@ -134,9 +179,9 @@ export function PaymentsPage() {
           <select
             className="h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={filters.providerId}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, providerId: e.target.value }))
-            }
+            onChange={(e) => {
+              changeFilter('providerId', e.target.value)
+            }}
           >
             <option value="">Все</option>
             {providers.map((p) => (
@@ -151,9 +196,9 @@ export function PaymentsPage() {
           <select
             className="h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={filters.currency}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, currency: e.target.value }))
-            }
+            onChange={(e) => {
+              changeFilter('currency', e.target.value)
+            }}
           >
             {['', 'RUB', 'USD', 'EUR'].map((v) => (
               <option key={v} value={v}>
@@ -249,6 +294,14 @@ export function PaymentsPage() {
             )}
           </section>
         )
+      )}
+      {!error && (
+        <Pagination
+          result={result}
+          onChange={change}
+          label="Журнал платежей"
+          disabled={loading}
+        />
       )}
       <Dialog
         open={!!selected}
