@@ -68,8 +68,8 @@ export function listServers(
 }
 
 /** Load one server card by its identifier. */
-export function getServer(id: string): Promise<Server> {
-  return apiRequest<Server>(`/servers/${encodeURIComponent(id)}`)
+export function getServer(id: string, signal?: AbortSignal): Promise<Server> {
+  return apiRequest<Server>(`/servers/${encodeURIComponent(id)}`, { signal })
 }
 
 /** Create a server from the catalog form. */
@@ -81,7 +81,10 @@ export function createServer(input: ServerInput): Promise<Server> {
 }
 
 /** Save changed server fields. */
-export function updateServer(id: string, input: ServerInput): Promise<Server> {
+export function updateServer(
+  id: string,
+  input: Partial<ServerInput> & { expectedUpdatedAt: string },
+): Promise<Server> {
   return apiRequest<Server>(`/servers/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(input),

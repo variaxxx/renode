@@ -115,3 +115,11 @@ export type Forecast = {
 export function getForecast(signal?: AbortSignal): Promise<Forecast> {
   return apiRequest('/payments/forecast', { signal })
 }
+
+/** Load the current payment date in the owner's configured timezone. */
+export function getPaymentCalendar(signal?: AbortSignal): Promise<{
+  asOfDate: string
+  timezone: string
+}> {
+  return apiRequest('/payments/calendar', { signal })
+}

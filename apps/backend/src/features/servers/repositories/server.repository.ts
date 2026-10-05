@@ -1,3 +1,4 @@
+import { ServerError, ServerNotFoundError } from '../server.errors'
 import { Injectable } from '@nestjs/common'
 import { Prisma, ServerStatus } from '../../../generated/prisma/client'
 import { PrismaService } from '../../../infra/prisma/prisma.service'
@@ -80,9 +81,21 @@ export class ServerRepository {
 
   /** Persist validated changes to a server. */
   async update(id: string, input: UpdateServerInput): Promise<Server> {
-    return this.prisma.server.update({
-      where: { id },
-      data: this.toData(input) as Prisma.ServerUpdateInput,
+    const { expectedUpdatedAt, ...changes } = input
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM server WHERE id = ${id}::uuid FOR UPDATE`
+      const current = await tx.server.findUnique({ where: { id } })
+      if (!current) throw new ServerNotFoundError()
+      if (current.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime())
+        throw new ServerError(
+          'SERVER_UPDATE_CONFLICT',
+          409,
+          'Сервер изменился. Закройте форму, обновите карточку и повторите изменения.',
+        )
+      return tx.server.update({
+        where: { id },
+        data: this.toData(changes) as Prisma.ServerUpdateInput,
+      })
     })
   }
 
@@ -104,7 +117,7 @@ export class ServerRepository {
   }
 
   /** Convert API fields to Prisma's persistence shape. */
-  private toData(input: UpdateServerInput): Record<string, unknown> {
+  private toData(input: Partial<ServerInput>): Record<string, unknown> {
     const data: Record<string, unknown> = { ...input }
     if (input.providerId !== undefined) {
       delete data.providerId

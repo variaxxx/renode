@@ -27,14 +27,14 @@ export class DeliveryRepository {
     )
   }
 
-  /** Lock and revalidate one event until its send result has been persisted. */
+  /** Claim current work briefly, then send without holding catalog locks. */
   async processNext(
     now: Date,
     handle: (reminder: ReservedReminder) => Promise<DeliveryResult>,
   ): Promise<boolean> {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const reminders = await tx.$queryRaw<ReservedReminder[]>`
+    const leaseUntil = new Date(now.getTime() + 60000)
+    const reminder = await this.prisma.$transaction(async (tx) => {
+      const reminders = await tx.$queryRaw<ReservedReminder[]>`
         SELECT d.id, s.id AS "serverId", s.name, d.event_type AS "eventType",
           d.event_date AS "eventDate", d."interval", d.attempts,
           n.chat_id AS "chatId", n.thread_id AS "threadId"
@@ -51,29 +51,36 @@ export class DeliveryRepository {
         LIMIT 1
         FOR UPDATE OF d, s, n SKIP LOCKED
       `
-        const reminder = reminders[0]
-        if (!reminder) return false
-        const result = await handle(reminder)
-        const completedAt = new Date()
-        await tx.notificationDelivery.update({
-          where: { id: reminder.id },
-          data: {
-            attempts: { increment: 1 },
-            status: result.success
-              ? 'SENT'
-              : result.retryAt
-                ? 'RETRY'
-                : 'FAILED',
-            sentAt: result.success ? completedAt : null,
-            lastError: result.success ? null : result.error.slice(0, 500),
-            nextAttemptAt: result.success
-              ? completedAt
-              : (result.retryAt ?? completedAt),
-          },
-        })
-        return true
+      const selected = reminders[0]
+      if (!selected) return null
+      await tx.notificationDelivery.update({
+        where: { id: selected.id },
+        data: {
+          attempts: { increment: 1 },
+          nextAttemptAt: leaseUntil,
+        },
+      })
+      return selected
+    })
+    if (!reminder) return false
+    const result = await handle(reminder)
+    const completedAt = new Date()
+    await this.prisma.notificationDelivery.updateMany({
+      where: {
+        id: reminder.id,
+        attempts: reminder.attempts + 1,
+        nextAttemptAt: leaseUntil,
+        status: { in: ['PENDING', 'RETRY'] },
       },
-      { timeout: 20000, maxWait: 5000 },
-    )
+      data: {
+        status: result.success ? 'SENT' : result.retryAt ? 'RETRY' : 'FAILED',
+        sentAt: result.success ? completedAt : null,
+        lastError: result.success ? null : result.error.slice(0, 500),
+        nextAttemptAt: result.success
+          ? completedAt
+          : (result.retryAt ?? completedAt),
+      },
+    })
+    return true
   }
 }

@@ -1,5 +1,5 @@
 import { CreditCard, X } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,33 +11,121 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { Currency, Server } from '@/features/servers/api/servers'
-import { recordPayment } from '../api/payments'
+import { ApiError } from '@/shared/api/client'
+import {
+  readPendingPayment,
+  savePendingPayment,
+  clearPendingPayment,
+} from '../lib/pending-payment'
+import {
+  getPaymentCalendar,
+  recordPayment,
+  type PaymentInput,
+} from '../api/payments'
 import { suggestPaymentDate } from '../lib/dates'
 
-/** Let the owner review and explicitly confirm a payment snapshot. */
-export function PaymentDialog({
-  server,
-  onClose,
-  onSaved,
-}: {
+type Props = {
   server: Server
   onClose: () => void
   onSaved: () => void
-}) {
-  const today = new Date().toISOString().slice(0, 10)
-  const [paymentDate, setPaymentDate] = useState(today)
-  const [amount, setAmount] = useState(server.cost)
-  const [currency, setCurrency] = useState<Currency>(server.currency)
-  const [nextPaymentDate, setNextPaymentDate] = useState(
-    suggestPaymentDate(
-      server.nextPaymentDate ?? today,
-      server.billingPeriodMonths,
-    ),
+}
+
+/** Load the owner date and recover unresolved requests before enabling entry. */
+export function PaymentDialog(props: Props) {
+  const [initial, setInitial] = useState<{
+    today: string
+    attempt: PaymentInput | null
+  } | null>(null)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    setInitial(null)
+    setError('')
+    void getPaymentCalendar(controller.signal)
+      .then(({ asOfDate }) => {
+        if (!controller.signal.aborted)
+          setInitial({
+            today: asOfDate,
+            attempt: readPendingPayment(props.server.id),
+          })
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : 'Не удалось загрузить дату платежа.',
+          )
+      })
+    return () => controller.abort()
+  }, [props.server.id, retry])
+  if (initial)
+    return <PaymentEntry key={props.server.id} {...props} {...initial} />
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) props.onClose()
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Запись платежа</DialogTitle>
+          <DialogDescription>
+            Загружаем дату и проверяем незавершённый запрос.
+          </DialogDescription>
+        </DialogHeader>
+        {error ? (
+          <>
+            <p role="alert" className="text-sm text-red-400">
+              {error}
+            </p>
+            <Button onClick={() => setRetry((value) => value + 1)}>
+              Повторить
+            </Button>
+          </>
+        ) : (
+          <p role="status">Загружаем…</p>
+        )}
+      </DialogContent>
+    </Dialog>
   )
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID())
-  const [confirmed, setConfirmed] = useState(false)
+}
+
+/** Freeze an attempted payment until its original request is resolved. */
+function PaymentEntry({
+  server,
+  onClose,
+  onSaved,
+  today,
+  attempt: initialAttempt,
+}: Props & {
+  today: string
+  attempt: PaymentInput | null
+}) {
+  const [attempt, setAttempt] = useState(initialAttempt)
+  const [paymentDate, setPaymentDate] = useState(
+    initialAttempt?.paymentDate ?? today,
+  )
+  const [amount, setAmount] = useState(initialAttempt?.amount ?? server.cost)
+  const [currency, setCurrency] = useState<Currency>(
+    initialAttempt?.currency ?? server.currency,
+  )
+  const [nextPaymentDate, setNextPaymentDate] = useState(
+    initialAttempt?.nextPaymentDate ??
+      suggestPaymentDate(
+        server.nextPaymentDate ?? today,
+        server.billingPeriodMonths,
+      ),
+  )
+  const [requestKey, setRequestKey] = useState(
+    () => initialAttempt?.requestKey ?? crypto.randomUUID(),
+  )
+  const [confirmed, setConfirmed] = useState(Boolean(initialAttempt))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const inFlight = useRef(false)
 
   /** Save only validated fields after the owner confirms the suggested date. */
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -47,25 +135,40 @@ export function PaymentDialog({
       setError('Введите неотрицательную сумму с точностью до двух знаков.')
       return
     }
-    if (!confirmed || pending) return
+    if (!confirmed || inFlight.current) return
+    inFlight.current = true
     setPending(true)
     setError('')
     try {
-      await recordPayment(server.id, {
+      const input = attempt ?? {
         requestKey,
         paymentDate,
         amount: normalizedAmount,
         currency,
         nextPaymentDate,
-      })
+      }
+      savePendingPayment(server.id, input)
+      setAttempt(input)
+      await recordPayment(server.id, input)
+      clearPendingPayment(server.id)
       onSaved()
     } catch (failure) {
+      if (
+        failure instanceof ApiError &&
+        [400, 404, 429].includes(failure.status ?? 0)
+      ) {
+        clearPendingPayment(server.id)
+        setAttempt(null)
+        setRequestKey(crypto.randomUUID())
+        setConfirmed(false)
+      }
       setError(
         failure instanceof Error
           ? failure.message
           : 'Не удалось записать платёж.',
       )
     } finally {
+      inFlight.current = false
       setPending(false)
     }
   }
@@ -89,7 +192,10 @@ export function PaymentDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(event) => void submit(event)} className="space-y-5">
-          <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
+          <fieldset
+            disabled={pending || Boolean(attempt)}
+            className="grid gap-5 sm:grid-cols-2"
+          >
             <div className="space-y-2">
               <Label htmlFor="payment-date">Дата платежа</Label>
               <Input
@@ -167,6 +273,13 @@ export function PaymentDialog({
               </Label>
             </div>
           </fieldset>
+          {attempt && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Этот запрос ожидает подтверждения. Повторите его с исходными
+              данными, чтобы проверить результат без дублирования платежа. После
+              подтверждения исправления можно внести через отмену записи.
+            </p>
+          )}
           {error && (
             <p role="alert" className="text-sm text-red-400">
               {error}
@@ -175,7 +288,11 @@ export function PaymentDialog({
           <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={pending || !confirmed}>
               <CreditCard aria-hidden="true" className="size-4 shrink-0" />
-              {pending ? 'Сохраняем…' : 'Подтвердить платёж'}
+              {pending
+                ? 'Сохраняем…'
+                : attempt
+                  ? 'Проверить и завершить платёж'
+                  : 'Подтвердить платёж'}
             </Button>
             <Button
               type="button"

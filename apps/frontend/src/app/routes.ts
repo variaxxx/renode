@@ -6,12 +6,33 @@ import {
   CreditCard,
   type LucideIcon,
 } from 'lucide-react'
-import type { ComponentType } from 'react'
-import { OverviewPage } from '@/features/overview/pages/OverviewPage'
-import { ProvidersPage } from '@/features/providers/pages/ProvidersPage'
-import { ServersPage } from '@/features/servers/pages/ServersPage'
-import { PaymentsPage } from '@/features/payments/pages/PaymentsPage'
-import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import { lazy, type ComponentType } from 'react'
+
+const OverviewPage = lazy(() =>
+  import('@/features/overview/pages/OverviewPage').then((m) => ({
+    default: m.OverviewPage,
+  })),
+)
+const ProvidersPage = lazy(() =>
+  import('@/features/providers/pages/ProvidersPage').then((m) => ({
+    default: m.ProvidersPage,
+  })),
+)
+const ServersPage = lazy(() =>
+  import('@/features/servers/pages/ServersPage').then((m) => ({
+    default: m.ServersPage,
+  })),
+)
+const PaymentsPage = lazy(() =>
+  import('@/features/payments/pages/PaymentsPage').then((m) => ({
+    default: m.PaymentsPage,
+  })),
+)
+const SettingsPage = lazy(() =>
+  import('@/features/settings/pages/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
+)
 
 export type AppRoute = {
   path: string

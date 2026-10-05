@@ -48,6 +48,13 @@ export class PaymentService {
     return this.payments.history(serverId)
   }
 
+  /** Return the owner's current date without using the browser timezone. */
+  async calendar(ownerId: string) {
+    const timezone =
+      (await this.notifications.find(ownerId))?.timezone ?? 'Europe/Moscow'
+    return { asOfDate: calendarDate(timezone), timezone }
+  }
+
   /** Classify deadlines using the owner's configured calendar date. */
   async overview(ownerId: string) {
     const timezone =

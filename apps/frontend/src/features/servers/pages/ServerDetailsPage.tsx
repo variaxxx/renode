@@ -70,6 +70,11 @@ function Detail({
 /** Render the complete server card at a stable URL. */
 export function ServerDetailsPage() {
   const { id } = useParams<{ id: string }>()
+  return <ServerDetailsCard key={id} id={id} />
+}
+
+/** Keep requests and editor state isolated to one route identifier. */
+function ServerDetailsCard({ id }: { id: string | undefined }) {
   const navigate = useNavigate()
   const [server, setServer] = useState<Server | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
@@ -91,36 +96,42 @@ export function ServerDetailsPage() {
   const [actionError, setActionError] = useState('')
 
   /** Load the server card and provider links. */
-  const loadDetails = useCallback(async () => {
-    if (!id) return
-    setLoading(true)
-    setError('')
-    const [serverResult, providerResult] = await Promise.allSettled([
-      getServer(id),
-      listProviders(),
-    ])
-    if (serverResult.status === 'fulfilled') setServer(serverResult.value)
-    else
-      setError(
-        serverResult.reason instanceof Error
-          ? serverResult.reason.message
-          : 'Не удалось загрузить сервер.',
-      )
-    if (providerResult.status === 'fulfilled') {
-      setProviders(providerResult.value)
-      setProvidersError('')
-    } else {
-      setProvidersError(
-        providerResult.reason instanceof Error
-          ? providerResult.reason.message
-          : 'Не удалось загрузить провайдеров.',
-      )
-    }
-    setLoading(false)
-  }, [id])
+  const loadDetails = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!id) return
+      setLoading(true)
+      setError('')
+      const [serverResult, providerResult] = await Promise.allSettled([
+        getServer(id, signal),
+        listProviders(),
+      ])
+      if (signal?.aborted) return
+      if (serverResult.status === 'fulfilled') setServer(serverResult.value)
+      else
+        setError(
+          serverResult.reason instanceof Error
+            ? serverResult.reason.message
+            : 'Не удалось загрузить сервер.',
+        )
+      if (providerResult.status === 'fulfilled') {
+        setProviders(providerResult.value)
+        setProvidersError('')
+      } else {
+        setProvidersError(
+          providerResult.reason instanceof Error
+            ? providerResult.reason.message
+            : 'Не удалось загрузить провайдеров.',
+        )
+      }
+      setLoading(false)
+    },
+    [id],
+  )
 
   useEffect(() => {
-    void loadDetails()
+    const controller = new AbortController()
+    void loadDetails(controller.signal)
+    return () => controller.abort()
   }, [loadDetails])
 
   /** Save edits and keep the visible card current. */
@@ -132,7 +143,18 @@ export function ServerDetailsPage() {
       navigate(`/servers/${created.id}`)
       return
     }
-    const updated = await updateServer(id, input)
+    if (!editingServer || editingServer.id !== id) return
+    const changes = Object.fromEntries(
+      Object.entries(input).filter(
+        ([key, value]) =>
+          JSON.stringify(value) !==
+          JSON.stringify(editingServer[key as keyof Server]),
+      ),
+    )
+    const updated = await updateServer(id, {
+      ...changes,
+      expectedUpdatedAt: editingServer.updatedAt,
+    })
     setServer(updated)
     setEditorOpen(false)
   }

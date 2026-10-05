@@ -63,7 +63,7 @@ Group 13 was manually checked in Chrome using the production frontend build and 
 
 **Платежи** shows the global ledger with date, provider, project and currency filters and CSV export. Cancel a mistaken payment with a reason; its original snapshot remains visible and is excluded from actual expenses. The UI reports whether its previous renewal deadline was restored. Only the latest effective payment with an unchanged resulting deadline and a saved previous date can restore the deadline; older records from before this migration have no saved previous date, so review their server deadlines manually. A corrected payment is entered through **Оплачено**.
 
-`POST /servers/:id/payments` requires a fresh UUID `requestKey`. Keep it unchanged for retries of identical data; a conflicting payload returns `PAYMENT_REQUEST_CONFLICT` (409). Recording and cancellation lock the server row and commit atomically. `GET /payments` accepts optional `from`, `to`, `providerId`, `project`, and `currency`; `POST /payments/:id/cancel` accepts `{ "reason": "Wrong amount" }` and returns the cancelled snapshot plus `deadlineRestored`.
+`POST /servers/:id/payments` requires a fresh UUID `requestKey`. The interface saves unresolved requests in session storage for the current tab and freezes their original data until a retry confirms the result, including after closing the dialog or reloading. Keep it unchanged for retries of identical data; a conflicting payload returns `PAYMENT_REQUEST_CONFLICT` (409). Recording and cancellation lock the server row and commit atomically. `GET /payments` accepts optional `from`, `to`, `providerId`, `project`, and `currency`; `POST /payments/:id/cancel` accepts `{ "reason": "Wrong amount" }` and returns the cancelled snapshot plus `deadlineRestored`.
 
 `GET /payments/forecast` returns separate currency monthly equivalents, twelve monthly totals and dated renewal events. The estimate assumes renewals at current tariffs, stopping at a supplied rental end or cancellation deadline, with month-end clamping based on the original deadline. Overdue payments are shown separately in the overview. No exchange rates are used. Cancelled payments are excluded from the actual expenses chart, which uses the owner's current calendar month.
 
@@ -74,3 +74,13 @@ The catalog CSV panel exports ordinary fields from the current filtered list. Im
 `GET /notifications/status` exposes the last worker cycle, last successful delivery, current queue counts, the next 20 reminders and the last 50 deliveries. The worker records a heartbeat after each cycle and is considered fresh for three minutes. Its delivery history can include old events, while stale pending events are excluded from queue counts.
 
 CI checks lint, formatting and builds before image publishing. See [verification results](deploy/verification-2026-10-05.md) for the restore drill and manual scenarios completed for this iteration. Apply both new migrations with the matching frontend/backend release before starting API and worker.
+
+## Release review fixes
+
+`PATCH /servers/:id` now requires `expectedUpdatedAt` copied from the last server response. Updates lock and compare the stored timestamp before writing; stale edits return `SERVER_UPDATE_CONFLICT` (409). The interface sends changed fields only. Deploy the matching frontend and backend together. No additional database migration is required for these fixes.
+
+`GET /payments/calendar` returns `{ asOfDate, timezone }` using the owner's settings; payment entry uses this date instead of UTC. Server creation, updates and imports reject `tags: null`; omit tags or supply an array.
+
+The reminder worker claims a delivery in a short transaction, releases catalog locks before calling Telegram and uses a 60-second lease with attempt matching to persist the result. Interrupted claims become eligible after the lease expires. Delivery remains at least once: a process failure after Telegram accepts a message but before its result is saved can cause a repeat.
+
+Release checks: lint, formatting and production builds; manual scenarios in a disposable PostgreSQL database for stale updates, idempotent payment replay, cancellation, payment recording during a six-second delivery, competing workers and expired lease recovery; DTO and pending-request storage checks; Chrome checks for sign-in, lazy page loading, owner-date payment entry and refreshed payment history. The main frontend chunk decreased from 548 to 340 KB, removing the size warning. Existing databases and real Telegram destinations were not used.

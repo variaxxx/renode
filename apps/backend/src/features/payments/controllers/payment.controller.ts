@@ -46,6 +46,13 @@ export class PaymentController {
     return this.payments.monthlyExpenses(requireAuth(request).ownerId)
   }
 
+  /** Provide the owner calendar date for payment entry. */
+  @Get('payments/calendar')
+  @Header('Cache-Control', 'no-store')
+  calendar(@Req() request: AuthenticatedRequest) {
+    return this.payments.calendar(requireAuth(request).ownerId)
+  }
+
   /** Return active deadlines and exact totals by currency. */
   @Get('payments/overview')
   @Header('Cache-Control', 'no-store')

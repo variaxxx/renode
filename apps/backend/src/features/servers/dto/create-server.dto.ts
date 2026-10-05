@@ -13,6 +13,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator'
 import { Currency } from '../../../generated/prisma/client'
 
@@ -83,7 +84,7 @@ export class CreateServerDto {
   @MaxLength(160)
   project?: string | null
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsArray()
   @ArrayMaxSize(20)
   @IsString({ each: true })
