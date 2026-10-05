@@ -35,6 +35,16 @@ export class PaymentRepository {
     })
   }
 
+  /** Fetch recorded expenses within the requested calendar window. */
+  async expenses(start: Date, end: Date) {
+    return this.prisma.payment.groupBy({
+      by: ['paymentDate', 'currency'],
+      where: { paymentDate: { gte: start, lt: end } },
+      _sum: { amount: true },
+      orderBy: { paymentDate: 'asc' },
+    })
+  }
+
   /** Read active deadlines and prices from one database snapshot. */
   async activeServers() {
     return this.prisma.server.findMany({

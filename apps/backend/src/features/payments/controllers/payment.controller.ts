@@ -32,6 +32,13 @@ export class PaymentController {
     return (await this.payments.history(id)).map(PaymentResponseDto.fromPayment)
   }
 
+  /** Return actual hosting expenses grouped by month and currency. */
+  @Get('payments/monthly-expenses')
+  @Header('Cache-Control', 'no-store')
+  async monthlyExpenses() {
+    return this.payments.monthlyExpenses()
+  }
+
   /** Return active deadlines and exact totals by currency. */
   @Get('payments/overview')
   @Header('Cache-Control', 'no-store')

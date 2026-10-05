@@ -61,6 +61,47 @@ export class PaymentService {
     }
   }
 
+  /** Sum actual payments into twelve UTC calendar months by currency. */
+  async monthlyExpenses() {
+    const now = new Date()
+    const start = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1),
+    )
+    const end = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    )
+    const months = Array.from({ length: 12 }, (_, index) => ({
+      month: new Date(
+        Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + index, 1),
+      )
+        .toISOString()
+        .slice(0, 7),
+      totals: {
+        RUB: new Prisma.Decimal(0),
+        USD: new Prisma.Decimal(0),
+        EUR: new Prisma.Decimal(0),
+      },
+    }))
+    const byMonth = new Map(months.map((item) => [item.month, item.totals]))
+    for (const payment of await this.payments.expenses(start, end)) {
+      const totals = byMonth.get(payment.paymentDate.toISOString().slice(0, 7))
+      if (totals && payment._sum.amount) {
+        totals[payment.currency] = totals[payment.currency].plus(
+          payment._sum.amount,
+        )
+      }
+    }
+    return {
+      asOfDate: now.toISOString().slice(0, 10),
+      months: months.map(({ month, totals }) => ({
+        month,
+        RUB: totals.RUB.toFixed(2),
+        USD: totals.USD.toFixed(2),
+        EUR: totals.EUR.toFixed(2),
+      })),
+    }
+  }
+
   /** Add exact decimal prices separately for each currency. */
   private summarize(servers: DueServer[]) {
     const totals = new Map<Currency, Prisma.Decimal>()

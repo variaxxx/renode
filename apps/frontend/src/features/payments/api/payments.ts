@@ -56,3 +56,15 @@ export function getPaymentOverview(
 ): Promise<PaymentOverview> {
   return apiRequest('/payments/overview', { signal })
 }
+
+export type MonthlyExpenses = {
+  asOfDate: string
+  months: ({ month: string } & Record<Currency, string>)[]
+}
+
+/** Load twelve months of actual payments separately for each currency. */
+export function getMonthlyExpenses(
+  signal?: AbortSignal,
+): Promise<MonthlyExpenses> {
+  return apiRequest('/payments/monthly-expenses', { signal })
+}

@@ -1,5 +1,11 @@
-import { RefreshCw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  ArrowRight,
+  CalendarDays,
+  Server as ServerIcon,
+  RefreshCw,
+  Wallet,
+} from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import {
@@ -7,7 +13,19 @@ import {
   type PaymentGroup,
   type PaymentOverview,
 } from '@/features/payments/api/payments'
+import { InfrastructureSummary } from '@/features/overview/components/InfrastructureSummary'
+import { listServers, type Server } from '@/features/servers/api/servers'
+import {
+  listProviders,
+  type Provider,
+} from '@/features/providers/api/providers'
 import { displayPaymentDate } from '@/features/payments/lib/dates'
+
+const MonthlyExpensesChart = lazy(() =>
+  import('@/features/overview/components/MonthlyExpensesChart').then(
+    (module) => ({ default: module.MonthlyExpensesChart }),
+  ),
+)
 
 /** Show each currency as its own exact total. */
 function CurrencyTotals({ group }: { group: PaymentGroup }) {
@@ -41,8 +59,9 @@ function DeadlineGroup({
   return (
     <section className="min-w-0 rounded-xl border border-border bg-card p-6">
       <h2
-        className={`mb-4 text-lg font-semibold ${overdue ? 'text-red-400' : ''}`}
+        className={`mb-4 flex flex-wrap items-center gap-2 text-lg font-semibold ${overdue ? 'text-red-400' : ''}`}
       >
+        <CalendarDays aria-hidden="true" className="size-5 shrink-0" />
         {title}{' '}
         <span className="text-sm text-muted-foreground">
           ({group.servers.length})
@@ -90,6 +109,8 @@ function DeadlineGroup({
 /** Render active renewal deadlines and separated currency expenses. */
 export function OverviewPage() {
   const [overview, setOverview] = useState<PaymentOverview | null>(null)
+  const [servers, setServers] = useState<Server[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -101,8 +122,19 @@ export function OverviewPage() {
       setLoading(true)
       setError('')
       try {
-        const result = await getPaymentOverview(controller.signal)
-        if (active) setOverview(result)
+        const [result, catalog, providerCatalog] = await Promise.all([
+          getPaymentOverview(controller.signal),
+          listServers(
+            { search: '', providerId: '', status: '', projectOrTag: '' },
+            controller.signal,
+          ),
+          listProviders(),
+        ])
+        if (active) {
+          setOverview(result)
+          setServers(catalog)
+          setProviders(providerCatalog)
+        }
       } catch (failure) {
         if (active)
           setError(
@@ -127,18 +159,34 @@ export function OverviewPage() {
         <div>
           <h1 className="text-3xl font-semibold">Обзор</h1>
           <p className="mt-2 text-muted-foreground">
-            Сроки оплаты и расходы активных серверов
+            Серверы, расходы и ближайшие сроки аренды
           </p>
         </div>
-        <Button
-          variant="outline"
-          disabled={loading}
-          onClick={() => setRevision((value) => value + 1)}
-        >
-          <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
-          Обновить
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/servers">
+              <ServerIcon aria-hidden="true" className="size-4" />К серверам
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
+            Обновить
+          </Button>
+        </div>
       </div>
+      <Suspense
+        fallback={
+          <p role="status" className="text-sm text-muted-foreground">
+            Загружаем график…
+          </p>
+        }
+      >
+        <MonthlyExpensesChart revision={revision} />
+      </Suspense>
       {loading ? (
         <p role="status" className="text-sm text-muted-foreground">
           Загружаем обзор…
@@ -160,8 +208,14 @@ export function OverviewPage() {
       ) : (
         overview && (
           <>
+            <InfrastructureSummary
+              servers={servers}
+              providers={providers}
+              asOfDate={overview.asOfDate}
+            />
             <section className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 text-lg font-semibold">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                <Wallet aria-hidden="true" className="size-5" />
                 Ожидаемые расходы по валютам
               </h2>
               <CurrencyTotals group={overview.expected} />
@@ -178,9 +232,10 @@ export function OverviewPage() {
                 </p>
                 <Link
                   to="/servers"
-                  className="mt-4 inline-block text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-4 inline-flex items-center gap-2 text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  К серверам →
+                  К серверам{' '}
+                  <ArrowRight aria-hidden="true" className="size-4" />
                 </Link>
               </section>
             )}
