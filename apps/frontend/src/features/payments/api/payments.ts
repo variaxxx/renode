@@ -1,0 +1,145 @@
+import {
+  allPages,
+  pageParams,
+  type Page,
+  type PageQuery,
+} from '@/shared/api/pagination'
+import { apiRequest } from '@/shared/api/client'
+import type { Currency } from '@/features/servers/api/servers'
+
+export type PaymentInput = {
+  paymentDate: string
+  amount: string
+  currency: Currency
+  nextPaymentDate: string
+  requestKey: string
+}
+export type Payment = Omit<PaymentInput, 'requestKey'> & {
+  cancelledAt: string | null
+  cancellationReason: string | null
+  id: string
+  serverId: string
+  createdAt: string
+}
+export type PaymentGroup = {
+  servers: {
+    id: string
+    name: string
+    providerId: string
+    nextPaymentDate: string | null
+    cost: string
+    currency: Currency
+  }[]
+  totals: { currency: Currency; amount: string }[]
+}
+export type PaymentOverview = {
+  asOfDate: string
+  timezone: string
+  overdue: PaymentGroup
+  upcoming7Days: PaymentGroup
+  upcoming30Days: PaymentGroup
+  expected: PaymentGroup
+}
+
+/** Record the owner's confirmed payment and renewal date. */
+export function recordPayment(
+  id: string,
+  input: PaymentInput,
+): Promise<Payment> {
+  return apiRequest(`/servers/${encodeURIComponent(id)}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+/** Load immutable payment snapshots for one server. */
+export function listPayments(
+  id: string,
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<Payment>> {
+  return apiRequest(
+    `/servers/${encodeURIComponent(id)}/payments?${pageParams(query)}`,
+    { signal },
+  )
+}
+
+/** Load deadlines and exact totals without converting currencies. */
+export function getPaymentOverview(
+  signal?: AbortSignal,
+): Promise<PaymentOverview> {
+  return apiRequest('/payments/overview', { signal })
+}
+
+export type MonthlyExpenses = {
+  asOfDate: string
+  months: ({ month: string } & Record<Currency, string>)[]
+}
+
+/** Load twelve months of actual payments separately for each currency. */
+export function getMonthlyExpenses(
+  signal?: AbortSignal,
+): Promise<MonthlyExpenses> {
+  return apiRequest('/payments/monthly-expenses', { signal })
+}
+
+export type LedgerPayment = Payment & {
+  serverName: string
+  providerName: string
+  project: string | null
+}
+/** Load one page of the filtered payment ledger. */
+export function getLedger(
+  filters: Record<string, string>,
+  query: PageQuery,
+  signal?: AbortSignal,
+): Promise<Page<LedgerPayment>> {
+  const params = pageParams(query)
+  for (const [key, value] of Object.entries(filters))
+    if (value) params.set(key, value)
+  return apiRequest(`/payments?${params}`, { signal })
+}
+
+/** Export every matching payment rather than only the visible page. */
+export function listLedger(
+  filters: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<LedgerPayment[]> {
+  return allPages((query) => getLedger(filters, query, signal))
+}
+
+/** Retain the original payment and record a cancellation reason. */
+export function cancelPayment(
+  id: string,
+  reason: string,
+): Promise<Payment & { deadlineRestored: boolean }> {
+  return apiRequest(`/payments/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+export type Forecast = {
+  asOfDate: string
+  timezone: string
+  monthlyEquivalent: { currency: Currency; amount: string }[]
+  months: ({ month: string } & Record<Currency, string>)[]
+  events: {
+    serverId: string
+    name: string
+    date: string
+    amount: string
+    currency: Currency
+  }[]
+}
+/** Load recurring current-price estimates. */
+export function getForecast(signal?: AbortSignal): Promise<Forecast> {
+  return apiRequest('/payments/forecast', { signal })
+}
+
+/** Load the current payment date in the owner's configured timezone. */
+export function getPaymentCalendar(signal?: AbortSignal): Promise<{
+  asOfDate: string
+  timezone: string
+}> {
+  return apiRequest('/payments/calendar', { signal })
+}

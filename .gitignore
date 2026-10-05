@@ -1,0 +1,7 @@
+node_modules/
+dist/
+/apps/backend/src/generated/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
