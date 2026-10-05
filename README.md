@@ -35,3 +35,13 @@ Open **Хранилище** to create a separate master password. Setup sends en
 In **Провайдеры**, use **Сохранить новый пароль**, **Показать пароль** and **Скрыть** for the account password. Locking the vault removes visible passwords and secret inputs. Provider notes remain unencrypted. Password changes and recovery use **Хранилище** and preserve existing encrypted provider passwords and the recovery wrapper.
 
 Group 11 was manually checked in Chrome with an isolated local fixture API: setup confirmation and one-time key display, invalid master-password rejection, unlock/lock, provider save/reveal/hide, reload while signed in, logout and repeated sign-in with the vault locked, master-password changes and recovery with access to an old provider password. Recorded vault requests contained encrypted envelopes only; provider ciphertext was saved once and remained unchanged during rewrapping. The interface was visually checked in the dark theme.
+
+## Payments API
+
+Payment routes require an owner session, return `Cache-Control: no-store`, and require `X-CSRF-Token` on writes:
+
+- `POST /servers/:id/payments` accepts `{ "paymentDate": "2026-10-05", "amount": "123.45", "currency": "USD", "nextPaymentDate": "2026-11-05" }`. Amounts are nonnegative decimal strings with at most two fractional digits; currencies are `RUB`, `USD` or `EUR`. Dates are valid `YYYY-MM-DD` calendar dates. The payment snapshot and next payment date are committed atomically; rental expiry is unchanged.
+- `GET /servers/:id/payments` returns immutable snapshots ordered by payment date, creation time and ID, newest first. Changing the server's tariff, cost or currency does not change recorded payments. A server with history cannot be deleted (`SERVER_HAS_PAYMENTS`); archive it instead.
+- `GET /payments/overview` returns `asOfDate`, `overdue`, `upcoming7Days`, `upcoming30Days` and `expected`. Each group contains server summaries and exact decimal `totals` per currency. Upcoming windows include today and the date 7/30 days ahead; overdue means before today. The current calendar date uses UTC. `expected` sums each active server's current period price once, without converting currencies or normalizing billing periods. Archived servers are excluded from every overview group.
+
+Group 12 was manually verified against local PostgreSQL and a temporary API instance: migration, exact fractional amounts, atomic rollback after a failed payment insertion, updated payment deadline with unchanged rental expiry, historical amounts and currencies after tariff changes, deletion restriction, session/CSRF protection, DTO rejection, missing servers, 7/30-day boundaries, overdue dates, per-currency totals and archive exclusion. Temporary verification records were removed.

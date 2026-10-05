@@ -71,15 +71,7 @@ export class ServerRepository {
   /** Delete a server only when it has no recorded payments. */
   async delete(id: string): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
-      const paymentTable = await tx.$queryRaw<
-        Array<{ exists: string | null }>
-      >`SELECT to_regclass('payment')::text AS "exists"`
-      if (paymentTable[0]?.exists) {
-        const payments = await tx.$queryRaw<Array<{ count: bigint }>>`
-          SELECT COUNT(*)::bigint AS count FROM payment WHERE server_id = ${id}::uuid
-        `
-        if (payments[0]?.count) return false
-      }
+      if (await tx.payment.count({ where: { serverId: id } })) return false
       await tx.server.delete({ where: { id } })
       return true
     })
