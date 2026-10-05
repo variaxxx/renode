@@ -3,7 +3,6 @@ import {
   CalendarDays,
   Server as ServerIcon,
   RefreshCw,
-  Wallet,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -13,6 +12,7 @@ import {
   type PaymentGroup,
   type PaymentOverview,
 } from '@/features/payments/api/payments'
+import { ExpenseForecast } from '@/features/payments/components/ExpenseForecast'
 import { InfrastructureSummary } from '@/features/overview/components/InfrastructureSummary'
 import { listServers, type Server } from '@/features/servers/api/servers'
 import {
@@ -178,6 +178,7 @@ export function OverviewPage() {
           </Button>
         </div>
       </div>
+      <ExpenseForecast revision={revision} />
       <Suspense
         fallback={
           <p role="status" className="text-sm text-muted-foreground">
@@ -213,17 +214,6 @@ export function OverviewPage() {
               providers={providers}
               asOfDate={overview.asOfDate}
             />
-            <section className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-                <Wallet aria-hidden="true" className="size-5" />
-                Ожидаемые расходы по валютам
-              </h2>
-              <CurrencyTotals group={overview.expected} />
-              <p className="mt-4 text-sm text-muted-foreground">
-                Стоимость одного текущего периода каждого активного сервера.
-                Периоды могут различаться; валюты не пересчитываются.
-              </p>
-            </section>
             {overview.expected.servers.length === 0 && (
               <section className="rounded-xl border border-dashed border-border p-6">
                 <h2 className="font-semibold">Активных серверов пока нет</h2>
@@ -240,8 +230,8 @@ export function OverviewPage() {
               </section>
             )}
             <p className="text-sm text-muted-foreground">
-              На {displayPaymentDate(overview.asOfDate)} (UTC). Ближайшие
-              периоды включают сегодня.
+              На {displayPaymentDate(overview.asOfDate)} ({overview.timezone}).
+              Ближайшие периоды включают сегодня.
             </p>
             {overview.overdue.servers.length > 0 && (
               <DeadlineGroup

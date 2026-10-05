@@ -48,6 +48,7 @@ export type ServerInput = {
 }
 
 export type ServerFilters = {
+  sort?: 'name' | 'payment' | 'costAsc' | 'costDesc'
   search: string
   providerId: string
   status: ServerStatus | ''

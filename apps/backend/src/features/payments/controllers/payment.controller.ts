@@ -6,7 +6,14 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
+  Req,
 } from '@nestjs/common'
+import { requireAuth, type AuthenticatedRequest } from '../../auth/auth.request'
+import {
+  ListPaymentsDto,
+  CancelPaymentDto,
+} from '../dto/payment-operations.dto'
 import { CreatePaymentDto } from '../dto/create-payment.dto'
 import { PaymentResponseDto } from '../dto/payment-response.dto'
 import { PaymentService } from '../services/payment.service'
@@ -35,14 +42,44 @@ export class PaymentController {
   /** Return actual hosting expenses grouped by month and currency. */
   @Get('payments/monthly-expenses')
   @Header('Cache-Control', 'no-store')
-  async monthlyExpenses() {
-    return this.payments.monthlyExpenses()
+  async monthlyExpenses(@Req() request: AuthenticatedRequest) {
+    return this.payments.monthlyExpenses(requireAuth(request).ownerId)
   }
 
   /** Return active deadlines and exact totals by currency. */
   @Get('payments/overview')
   @Header('Cache-Control', 'no-store')
-  async overview() {
-    return this.payments.overview()
+  async overview(@Req() request: AuthenticatedRequest) {
+    return this.payments.overview(requireAuth(request).ownerId)
+  }
+  /** Read the owner's global payment ledger. */
+  @Get('payments')
+  @Header('Cache-Control', 'no-store')
+  async list(@Query() filters: ListPaymentsDto) {
+    return (await this.payments.list(filters)).map((p) => ({
+      ...PaymentResponseDto.fromPayment(p),
+      serverName: p.server.name,
+      providerName: p.server.provider.name,
+      project: p.server.project,
+    }))
+  }
+  /** Cancel a payment while retaining its original audit snapshot. */
+  @Post('payments/:id/cancel')
+  @Header('Cache-Control', 'no-store')
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CancelPaymentDto,
+  ) {
+    const result = await this.payments.cancel(id, body.reason)
+    return {
+      ...PaymentResponseDto.fromPayment(result.payment),
+      deadlineRestored: result.deadlineRestored,
+    }
+  }
+  /** Return normalized costs and a recurring payment calendar. */
+  @Get('payments/forecast')
+  @Header('Cache-Control', 'no-store')
+  forecast(@Req() request: AuthenticatedRequest) {
+    return this.payments.forecast(requireAuth(request).ownerId)
   }
 }

@@ -34,6 +34,7 @@ export function PaymentDialog({
       server.billingPeriodMonths,
     ),
   )
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID())
   const [confirmed, setConfirmed] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -51,6 +52,7 @@ export function PaymentDialog({
     setError('')
     try {
       await recordPayment(server.id, {
+        requestKey,
         paymentDate,
         amount: normalizedAmount,
         currency,
@@ -97,6 +99,7 @@ export function PaymentDialog({
                 value={paymentDate}
                 onChange={(e) => {
                   setPaymentDate(e.target.value)
+                  setRequestKey(crypto.randomUUID())
                   setConfirmed(false)
                 }}
               />
@@ -110,6 +113,7 @@ export function PaymentDialog({
                 value={amount}
                 onChange={(e) => {
                   setAmount(e.target.value)
+                  setRequestKey(crypto.randomUUID())
                   setConfirmed(false)
                 }}
               />
@@ -122,6 +126,7 @@ export function PaymentDialog({
                 value={currency}
                 onChange={(e) => {
                   setCurrency(e.target.value as Currency)
+                  setRequestKey(crypto.randomUUID())
                   setConfirmed(false)
                 }}
               >
@@ -139,6 +144,7 @@ export function PaymentDialog({
                 value={nextPaymentDate}
                 onChange={(e) => {
                   setNextPaymentDate(e.target.value)
+                  setRequestKey(crypto.randomUUID())
                   setConfirmed(false)
                 }}
               />

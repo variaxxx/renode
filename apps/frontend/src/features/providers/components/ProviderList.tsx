@@ -127,7 +127,7 @@ export function ProviderList({
                     <Pencil aria-hidden="true" className="size-4" /> Изменить
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-red-400"
+                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                     onSelect={() => {
                       setDeleteError('')
                       setConfirming(provider)
@@ -183,6 +183,7 @@ export function ProviderList({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Отмена</AlertDialogCancel>
             <Button
+              variant="destructive"
               disabled={deleting}
               onClick={() => {
                 if (confirming) void handleDelete(confirming)

@@ -1,3 +1,4 @@
+import { PaymentError } from '../../features/payments/payment.errors'
 import { NotificationError } from '../../features/notifications/notification.errors'
 import {
   ArgumentsHost,
@@ -31,6 +32,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
     message: string
   } {
     if (
+      exception instanceof PaymentError ||
       exception instanceof NotificationError ||
       exception instanceof AuthError ||
       exception instanceof ProviderError ||

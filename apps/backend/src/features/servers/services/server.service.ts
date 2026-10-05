@@ -38,6 +38,17 @@ export class ServerService {
     }
   }
 
+  /** Reject missing providers before importing the entire batch. */
+  async import(inputs: ServerInput[]) {
+    for (const id of new Set(inputs.map((s) => s.providerId)))
+      await this.requireProvider(id)
+    try {
+      return await this.servers.import(inputs)
+    } catch (error) {
+      this.mapWriteError(error)
+    }
+  }
+
   /** Enforce catalog invariants while changing a server. */
   async update(id: string, input: UpdateServerInput): Promise<Server> {
     if (input.providerId !== undefined)

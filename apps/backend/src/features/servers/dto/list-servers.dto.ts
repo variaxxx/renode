@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -9,8 +10,12 @@ import { ServerStatus } from '../../../generated/prisma/client'
 
 export class ListServersDto {
   @IsOptional()
+  @IsIn(['name', 'payment', 'costAsc', 'costDesc'])
+  sort?: 'name' | 'payment' | 'costAsc' | 'costDesc'
+
+  @IsOptional()
   @IsString()
-  @MaxLength(160)
+  @MaxLength(253)
   search?: string
 
   @IsOptional()

@@ -1,7 +1,10 @@
-import { IsEnum, IsISO8601, IsString, Matches } from 'class-validator'
+import { IsEnum, IsISO8601, IsString, IsUUID, Matches } from 'class-validator'
 import { Currency } from '../../../generated/prisma/client'
 
 export class CreatePaymentDto {
+  @IsUUID()
+  requestKey!: string
+
   @IsISO8601({ strict: true })
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   paymentDate!: string

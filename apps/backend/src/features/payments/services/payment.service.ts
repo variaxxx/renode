@@ -1,3 +1,7 @@
+import { NotificationRepository } from '../../notifications/repositories/notification.repository'
+import { calendarDate, advanceMonth } from '../../../common/calendar'
+import { PaymentError } from '../payment.errors'
+import type { ListPaymentsDto } from '../dto/payment-operations.dto'
 import { Injectable } from '@nestjs/common'
 import { Prisma, type Currency } from '../../../generated/prisma/client'
 import { ServerService } from '../../servers/services/server.service'
@@ -12,6 +16,7 @@ export class PaymentService {
   constructor(
     private readonly payments: PaymentRepository,
     private readonly servers: ServerService,
+    private readonly notifications: NotificationRepository,
   ) {}
 
   /** Record the confirmed amount and deadline without changing rental expiry. */
@@ -19,6 +24,15 @@ export class PaymentService {
     try {
       return await this.payments.record(serverId, input)
     } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new PaymentError(
+          'PAYMENT_REQUEST_CONFLICT',
+          409,
+          'Этот ключ уже использован для платежа. Обновите форму.',
+        )
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         (error.code === 'P2025' || error.code === 'P2003')
@@ -34,9 +48,11 @@ export class PaymentService {
     return this.payments.history(serverId)
   }
 
-  /** Classify calendar deadlines using today's UTC date until owner timezone setup. */
-  async overview() {
-    const today = new Date().toISOString().slice(0, 10)
+  /** Classify deadlines using the owner's configured calendar date. */
+  async overview(ownerId: string) {
+    const timezone =
+      (await this.notifications.find(ownerId))?.timezone ?? 'Europe/Moscow'
+    const today = calendarDate(timezone)
     const start = new Date(`${today}T00:00:00.000Z`).getTime()
     const servers = await this.payments.activeServers()
     const upcoming = (days: number) =>
@@ -48,6 +64,7 @@ export class PaymentService {
       })
     return {
       asOfDate: today,
+      timezone,
       overdue: this.summarize(
         servers.filter(
           (server) =>
@@ -61,9 +78,12 @@ export class PaymentService {
     }
   }
 
-  /** Sum actual payments into twelve UTC calendar months by currency. */
-  async monthlyExpenses() {
-    const now = new Date()
+  /** Sum effective payments into twelve owner calendar months by currency. */
+  async monthlyExpenses(ownerId: string) {
+    const timezone =
+      (await this.notifications.find(ownerId))?.timezone ?? 'Europe/Moscow'
+    const today = calendarDate(timezone)
+    const now = new Date(`${today}T00:00:00Z`)
     const start = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1),
     )
@@ -114,7 +134,10 @@ export class PaymentService {
       )
     return {
       servers: servers.map((server) => ({
-        ...server,
+        id: server.id,
+        name: server.name,
+        providerId: server.providerId,
+        currency: server.currency,
         cost: server.cost.toFixed(2),
         nextPaymentDate:
           server.nextPaymentDate?.toISOString().slice(0, 10) ?? null,
@@ -122,6 +145,108 @@ export class PaymentService {
       totals: [...totals]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([currency, amount]) => ({ currency, amount: amount.toFixed(2) })),
+    }
+  }
+  /** Read the ledger with server and provider labels. */
+  list(filters: ListPaymentsDto) {
+    if (filters.from && filters.to && filters.from > filters.to)
+      throw new PaymentError(
+        'PAYMENT_RANGE_INVALID',
+        400,
+        'Начальная дата должна быть не позже конечной.',
+      )
+    return this.payments.list(filters)
+  }
+
+  /** Preserve a cancelled snapshot and undo its renewal when still applicable. */
+  cancel(id: string, reason: string) {
+    return this.payments.cancel(id, reason)
+  }
+
+  /** Project recurring current tariffs over twelve months without currency conversion. */
+  async forecast(ownerId: string) {
+    const timezone =
+      (await this.notifications.find(ownerId))?.timezone ?? 'Europe/Moscow'
+    const today = calendarDate(timezone)
+    const first = `${today.slice(0, 7)}-01`
+    const end = advanceMonth(first, 12)
+    const servers = await this.payments.activeServers()
+    const monthly = {
+      RUB: new Prisma.Decimal(0),
+      USD: new Prisma.Decimal(0),
+      EUR: new Prisma.Decimal(0),
+    }
+    const months = Array.from({ length: 12 }, (_, i) => ({
+      month: advanceMonth(first, i).slice(0, 7),
+      totals: {
+        RUB: new Prisma.Decimal(0),
+        USD: new Prisma.Decimal(0),
+        EUR: new Prisma.Decimal(0),
+      },
+    }))
+    const events: {
+      serverId: string
+      name: string
+      date: string
+      amount: string
+      currency: Currency
+    }[] = []
+    for (const server of servers) {
+      monthly[server.currency] = monthly[server.currency].plus(
+        server.cost.div(server.billingPeriodMonths),
+      )
+      const base = server.nextPaymentDate?.toISOString().slice(0, 10)
+      if (!base) continue
+      const monthsSinceBase =
+        (Number(today.slice(0, 4)) - Number(base.slice(0, 4))) * 12 +
+        Number(today.slice(5, 7)) -
+        Number(base.slice(5, 7))
+      const firstOffset = Math.max(
+        0,
+        Math.floor(monthsSinceBase / server.billingPeriodMonths) - 1,
+      )
+      for (let i = firstOffset; ; i++) {
+        const date = advanceMonth(base, i * server.billingPeriodMonths)
+        if (date >= end) break
+        if (
+          (server.rentalEndDate &&
+            date > server.rentalEndDate.toISOString().slice(0, 10)) ||
+          (server.cancellationDeadline &&
+            date > server.cancellationDeadline.toISOString().slice(0, 10))
+        )
+          break
+        if (date < today) continue
+        months.find((m) => m.month === date.slice(0, 7))!.totals[
+          server.currency
+        ] = months
+          .find((m) => m.month === date.slice(0, 7))!
+          .totals[server.currency].plus(server.cost)
+        events.push({
+          serverId: server.id,
+          name: server.name,
+          date,
+          amount: server.cost.toFixed(2),
+          currency: server.currency,
+        })
+      }
+    }
+    return {
+      asOfDate: today,
+      timezone,
+      monthlyEquivalent: Object.entries(monthly).map(([currency, amount]) => ({
+        currency,
+        amount: amount.toFixed(2),
+      })),
+      months: months.map((m) => ({
+        month: m.month,
+        ...Object.fromEntries(
+          Object.entries(m.totals).map(([currency, amount]) => [
+            currency,
+            amount.toFixed(2),
+          ]),
+        ),
+      })),
+      events: events.sort((a, b) => a.date.localeCompare(b.date)),
     }
   }
 }

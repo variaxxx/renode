@@ -11,6 +11,8 @@ export class PaymentResponseDto {
       currency: payment.currency,
       nextPaymentDate: payment.nextPaymentDate.toISOString().slice(0, 10),
       createdAt: payment.createdAt.toISOString(),
+      cancelledAt: payment.cancelledAt?.toISOString() ?? null,
+      cancellationReason: payment.cancellationReason,
     }
   }
 }

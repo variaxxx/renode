@@ -6,8 +6,11 @@ export type PaymentInput = {
   amount: string
   currency: Currency
   nextPaymentDate: string
+  requestKey: string
 }
-export type Payment = PaymentInput & {
+export type Payment = Omit<PaymentInput, 'requestKey'> & {
+  cancelledAt: string | null
+  cancellationReason: string | null
   id: string
   serverId: string
   createdAt: string
@@ -25,6 +28,7 @@ export type PaymentGroup = {
 }
 export type PaymentOverview = {
   asOfDate: string
+  timezone: string
   overdue: PaymentGroup
   upcoming7Days: PaymentGroup
   upcoming30Days: PaymentGroup
@@ -67,4 +71,47 @@ export function getMonthlyExpenses(
   signal?: AbortSignal,
 ): Promise<MonthlyExpenses> {
   return apiRequest('/payments/monthly-expenses', { signal })
+}
+
+export type LedgerPayment = Payment & {
+  serverName: string
+  providerName: string
+  project: string | null
+}
+/** Load the global ledger with optional filters. */
+export function getLedger(
+  filters: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<LedgerPayment[]> {
+  const params = new URLSearchParams(
+    Object.entries(filters).filter(([, v]) => v),
+  )
+  return apiRequest(`/payments?${params}`, { signal })
+}
+/** Retain the original payment and record a cancellation reason. */
+export function cancelPayment(
+  id: string,
+  reason: string,
+): Promise<Payment & { deadlineRestored: boolean }> {
+  return apiRequest(`/payments/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  })
+}
+export type Forecast = {
+  asOfDate: string
+  timezone: string
+  monthlyEquivalent: { currency: Currency; amount: string }[]
+  months: ({ month: string } & Record<Currency, string>)[]
+  events: {
+    serverId: string
+    name: string
+    date: string
+    amount: string
+    currency: Currency
+  }[]
+}
+/** Load recurring current-price estimates. */
+export function getForecast(signal?: AbortSignal): Promise<Forecast> {
+  return apiRequest('/payments/forecast', { signal })
 }

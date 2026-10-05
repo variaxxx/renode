@@ -1,6 +1,6 @@
 import { Plus, RefreshCw, Server as ServerIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,14 +22,8 @@ import {
   type ServerInput,
 } from '@/features/servers/api/servers'
 import { ServerForm } from '@/features/servers/components/ServerForm'
+import { CatalogTransfer } from '@/features/servers/components/CatalogTransfer'
 import { countryFlag, countryName } from '@/features/servers/lib/countries'
-
-const initialFilters: ServerFilters = {
-  search: '',
-  providerId: '',
-  status: 'ACTIVE',
-  projectOrTag: '',
-}
 
 const selectClass =
   'h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -40,7 +34,25 @@ export function ServersPage() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [providersError, setProvidersError] = useState('')
   const [servers, setServers] = useState<Server[]>([])
-  const [filters, setFilters] = useState<ServerFilters>(initialFilters)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo<ServerFilters>(
+    () => ({
+      search: searchParams.get('search') ?? '',
+      providerId: searchParams.get('providerId') ?? '',
+      status: ['ACTIVE', 'ARCHIVED', ''].includes(
+        searchParams.get('status') ?? 'ACTIVE',
+      )
+        ? ((searchParams.get('status') ?? 'ACTIVE') as ServerFilters['status'])
+        : 'ACTIVE',
+      projectOrTag: searchParams.get('projectOrTag') ?? '',
+      sort: (['name', 'payment', 'costAsc', 'costDesc'].includes(
+        searchParams.get('sort') ?? '',
+      )
+        ? searchParams.get('sort')
+        : 'name') as ServerFilters['sort'],
+    }),
+    [searchParams],
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -99,7 +111,10 @@ export function ServersPage() {
     key: Key,
     value: ServerFilters[Key],
   ) {
-    setFilters((current) => ({ ...current, [key]: value }))
+    setLoading(true)
+    const params = new URLSearchParams(searchParams)
+    params.set(key, value ?? 'name')
+    setSearchParams(params, { replace: true })
   }
 
   /** Save a new server and open its card regardless of active filters. */
@@ -151,15 +166,15 @@ export function ServersPage() {
 
       <section
         aria-label="Фильтры серверов"
-        className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 xl:grid-cols-5"
       >
         <label className="flex flex-col gap-3 text-sm">
-          <span>Поиск по названию</span>
+          <span>Название, IP или домен</span>
           <Input
             type="search"
             value={filters.search}
             onChange={(event) => changeFilter('search', event.target.value)}
-            placeholder="Название сервера"
+            placeholder="Название, IP или домен"
           />
         </label>
         <label className="flex flex-col gap-3 text-sm">
@@ -204,7 +219,31 @@ export function ServersPage() {
             placeholder="Проект или тег"
           />
         </label>
+        <label className="flex flex-col gap-3 text-sm">
+          <span>Сортировка</span>
+          <select
+            className={selectClass}
+            value={filters.sort}
+            onChange={(e) =>
+              changeFilter('sort', e.target.value as ServerFilters['sort'])
+            }
+          >
+            <option value="name">По названию</option>
+            <option value="payment">По ближайшей оплате</option>
+            <option value="costAsc">Стоимость ↑ (по валютам)</option>
+            <option value="costDesc">Стоимость ↓ (по валютам)</option>
+          </select>
+        </label>
       </section>
+      <CatalogTransfer
+        providers={providers}
+        disabled={loading || !!error}
+        servers={servers}
+        onImported={() => {
+          setRefreshKey((v) => v + 1)
+          void loadProviders()
+        }}
+      />
 
       {providersError && (
         <p role="alert" className="text-sm text-red-400">
@@ -256,11 +295,11 @@ export function ServersPage() {
       ) : (
         <ul className="grid gap-4 lg:grid-cols-2">
           {servers.map((server) => (
-            <li key={server.id} className="min-w-0">
+            <li key={server.id} className="flex min-w-0 flex-col">
               <Link
                 to={`/servers/${server.id}`}
                 aria-label={`Открыть сервер ${server.name}`}
-                className="block h-full rounded-xl border border-border bg-card p-5 transition-colors hover:border-ring hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="block flex-1 rounded-xl border border-border bg-card p-5 transition-colors hover:border-ring hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

@@ -55,6 +55,11 @@ export class NotificationService {
     })
   }
 
+  /** Expose safe worker and delivery diagnostics. */
+  status() {
+    return this.repository.status()
+  }
+
   /** Send a test using only the owner's persisted destination. */
   async test(ownerId: string): Promise<void> {
     const settings = await this.read(ownerId)

@@ -124,6 +124,12 @@ model Payment {
   currency        Currency
   nextPaymentDate DateTime @map("next_payment_date") @db.Date
   createdAt       DateTime @default(now()) @map("created_at")
+  ledgerSequence Int @unique @default(autoincrement()) @map("ledger_sequence")
+  previousPaymentId String? @map("previous_payment_id") @db.Uuid
+  requestKey      String?  @unique @map("request_key") @db.Uuid
+  previousPaymentDate DateTime? @map("previous_payment_date") @db.Date
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancellationReason String? @map("cancellation_reason") @db.VarChar(500)
   server          Server   @relation(fields: [serverId], references: [id], onDelete: Restrict)
 
   @@index([serverId, paymentDate])
@@ -175,4 +181,12 @@ model NotificationDelivery {
   @@unique([serverId, eventType, eventDate, interval], map: "notification_delivery_event_key")
   @@index([status, nextAttemptAt])
   @@map("notification_delivery")
+}
+
+model WorkerHeartbeat {
+ id String @id
+ lastCycleAt DateTime @map("last_cycle_at") @db.Timestamptz(3)
+ lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(3)
+ lastError String? @map("last_error") @db.VarChar(500)
+ @@map("worker_heartbeat")
 }

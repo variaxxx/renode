@@ -17,8 +17,14 @@ export class ServerRepository {
     const where: Prisma.ServerWhereInput = {
       providerId: filters.providerId,
       status: filters.status,
-      name: filters.search
-        ? { contains: filters.search, mode: 'insensitive' }
+      AND: filters.search
+        ? [
+            {
+              OR: ['name', 'ipAddress', 'domain'].map((field) => ({
+                [field]: { contains: filters.search, mode: 'insensitive' },
+              })),
+            },
+          ]
         : undefined,
       OR: filters.projectOrTag
         ? [
@@ -31,7 +37,16 @@ export class ServerRepository {
     }
     return this.prisma.server.findMany({
       where,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy:
+        filters.sort === 'payment'
+          ? [{ nextPaymentDate: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }]
+          : filters.sort === 'costAsc' || filters.sort === 'costDesc'
+            ? [
+                { currency: 'asc' },
+                { cost: filters.sort === 'costAsc' ? 'asc' : 'desc' },
+                { id: 'asc' },
+              ]
+            : [{ name: 'asc' }, { id: 'asc' }],
     })
   }
 
@@ -50,6 +65,17 @@ export class ServerRepository {
     return this.prisma.server.create({
       data: this.toData(input) as Prisma.ServerCreateInput,
     })
+  }
+
+  /** Create all imported rows in one transaction. */
+  async import(inputs: ServerInput[]) {
+    return this.prisma.$transaction(
+      inputs.map((input) =>
+        this.prisma.server.create({
+          data: this.toData(input) as Prisma.ServerCreateInput,
+        }),
+      ),
+    )
   }
 
   /** Persist validated changes to a server. */

@@ -15,6 +15,7 @@ import { countries, countryFlag } from '@/features/servers/lib/countries'
 type ServerFormProps = {
   providers: Provider[]
   server?: Server
+  creatingCopy?: boolean
   onSubmit: (input: ServerInput) => Promise<void>
   onCancel: () => void
 }
@@ -84,6 +85,7 @@ function validDate(value: string): boolean {
 export function ServerForm({
   providers,
   server,
+  creatingCopy = false,
   onSubmit,
   onCancel,
 }: ServerFormProps) {
@@ -388,7 +390,7 @@ export function ServerForm({
           <Save aria-hidden="true" className="size-4 shrink-0" />
           {pending
             ? 'Сохраняем…'
-            : server
+            : server && !creatingCopy
               ? 'Сохранить изменения'
               : 'Добавить сервер'}
         </Button>

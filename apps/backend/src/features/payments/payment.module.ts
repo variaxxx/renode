@@ -1,3 +1,4 @@
+import { NotificationModule } from '../notifications/notification.module'
 import { Module } from '@nestjs/common'
 import { PrismaModule } from '../../infra/prisma/prisma.module'
 import { ServerModule } from '../servers/server.module'
@@ -6,7 +7,7 @@ import { PaymentRepository } from './repositories/payment.repository'
 import { PaymentService } from './services/payment.service'
 
 @Module({
-  imports: [PrismaModule, ServerModule],
+  imports: [PrismaModule, ServerModule, NotificationModule],
   controllers: [PaymentController],
   providers: [PaymentRepository, PaymentService],
 })

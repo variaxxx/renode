@@ -11,6 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common'
+import { ImportServersDto } from '../dto/import-servers.dto'
 import { CreateServerDto } from '../dto/create-server.dto'
 import { ListServersDto } from '../dto/list-servers.dto'
 import { ServerResponseDto } from '../dto/server-response.dto'
@@ -40,6 +41,15 @@ export class ServerController {
   @Header('Cache-Control', 'no-store')
   async create(@Body() body: CreateServerDto) {
     return ServerResponseDto.fromServer(await this.servers.create(body))
+  }
+
+  /** Import a validated catalog batch atomically. */
+  @Post('import')
+  @Header('Cache-Control', 'no-store')
+  async import(@Body() body: ImportServersDto) {
+    return (await this.servers.import(body.servers)).map(
+      ServerResponseDto.fromServer,
+    )
   }
 
   /** Change an existing server. */

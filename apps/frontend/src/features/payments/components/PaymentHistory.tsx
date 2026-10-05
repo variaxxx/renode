@@ -93,6 +93,11 @@ export function PaymentHistory({
                   </td>
                   <td className="p-3 whitespace-nowrap tabular-nums">
                     {payment.amount} {payment.currency}
+                    {payment.cancelledAt && (
+                      <p className="text-red-400">
+                        Отменён: {payment.cancellationReason}
+                      </p>
+                    )}
                   </td>
                   <td className="p-3 whitespace-nowrap">
                     {displayPaymentDate(payment.nextPaymentDate)}

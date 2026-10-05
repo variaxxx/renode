@@ -30,3 +30,41 @@ export function saveNotificationSettings(
 export function testNotification(): Promise<void> {
   return apiRequest('/notifications/test', { method: 'POST' })
 }
+
+export type NotificationStatus = {
+  timezone: string
+  upcoming: {
+    serverId: string
+    serverName: string
+    eventType: string
+    eventDate: string
+    interval: number
+    scheduledAt: string
+  }[]
+  workerAlive: boolean
+  heartbeat: {
+    lastCycleAt: string
+    lastSuccessAt: string | null
+    lastError: string | null
+  } | null
+  lastSentAt: string | null
+  counts: { status: string; count: number }[]
+  deliveries: {
+    id: string
+    serverId: string
+    serverName: string
+    eventType: string
+    eventDate: string
+    status: string
+    attempts: number
+    nextAttemptAt: string
+    sentAt: string | null
+    lastError: string | null
+  }[]
+}
+/** Read safe worker diagnostics and recent delivery history. */
+export function getNotificationStatus(
+  signal?: AbortSignal,
+): Promise<NotificationStatus> {
+  return apiRequest('/notifications/status', { signal })
+}

@@ -1,4 +1,11 @@
-import { Archive, CircleCheck, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  Copy,
+  CircleCheck,
+  Pencil,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
@@ -24,6 +31,7 @@ import {
 } from '@/features/providers/api/providers'
 import {
   archiveServer,
+  createServer,
   deleteServer,
   getServer,
   updateServer,
@@ -71,6 +79,7 @@ export function ServerDetailsPage() {
   const [paymentServer, setPaymentServer] = useState<Server | null>(null)
   const [paymentRevision, setPaymentRevision] = useState(0)
   const [paymentNotice, setPaymentNotice] = useState('')
+  const [creatingCopy, setCreatingCopy] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingServer, setEditingServer] = useState<Server | null>(null)
   const [editorSession, setEditorSession] = useState(0)
@@ -117,6 +126,12 @@ export function ServerDetailsPage() {
   /** Save edits and keep the visible card current. */
   async function handleUpdate(input: ServerInput) {
     if (!id) return
+    if (creatingCopy) {
+      const created = await createServer(input)
+      setEditorOpen(false)
+      navigate(`/servers/${created.id}`)
+      return
+    }
     const updated = await updateServer(id, input)
     setServer(updated)
     setEditorOpen(false)
@@ -216,6 +231,7 @@ export function ServerDetailsPage() {
                 variant="outline"
                 disabled={providers.length === 0}
                 onClick={() => {
+                  setCreatingCopy(false)
                   setEditingServer(server)
                   setEditorSession((current) => current + 1)
                   setEditorOpen(true)
@@ -224,9 +240,27 @@ export function ServerDetailsPage() {
                 <Pencil aria-hidden="true" className="size-4 shrink-0" />
                 Изменить
               </Button>
+              <Button
+                variant="outline"
+                disabled={providers.length === 0}
+                onClick={() => {
+                  setCreatingCopy(true)
+                  setEditingServer({
+                    ...server,
+                    name: `${server.name} (копия)`.slice(0, 160),
+                    ipAddress: null,
+                    domain: null,
+                  })
+                  setEditorSession((current) => current + 1)
+                  setEditorOpen(true)
+                }}
+              >
+                <Copy aria-hidden="true" className="size-4" />
+                Дублировать
+              </Button>
               {server.status === 'ACTIVE' && (
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   onClick={() => openConfirmation('archive')}
                 >
                   <Archive aria-hidden="true" className="size-4 shrink-0" />
@@ -234,7 +268,7 @@ export function ServerDetailsPage() {
                 </Button>
               )}
               <Button
-                variant="outline"
+                variant="destructive"
                 onClick={() => openConfirmation('delete')}
               >
                 <Trash2 aria-hidden="true" className="size-4 shrink-0" />
@@ -358,7 +392,9 @@ export function ServerDetailsPage() {
           <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
             <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Изменить сервер</DialogTitle>
+                <DialogTitle>
+                  {creatingCopy ? 'Копия сервера' : 'Изменить сервер'}
+                </DialogTitle>
                 <DialogDescription>
                   Обновите сведения об аренде и сроках.
                 </DialogDescription>
@@ -368,6 +404,7 @@ export function ServerDetailsPage() {
                   key={editorSession}
                   providers={providers}
                   server={editingServer}
+                  creatingCopy={creatingCopy}
                   onSubmit={handleUpdate}
                   onCancel={() => setEditorOpen(false)}
                 />
@@ -403,6 +440,7 @@ export function ServerDetailsPage() {
                   Отмена
                 </AlertDialogCancel>
                 <Button
+                  variant="destructive"
                   disabled={actionPending}
                   onClick={() => void handleAction()}
                 >

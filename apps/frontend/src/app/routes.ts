@@ -3,12 +3,14 @@ import {
   Globe2,
   Server,
   Settings,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { OverviewPage } from '@/features/overview/pages/OverviewPage'
 import { ProvidersPage } from '@/features/providers/pages/ProvidersPage'
 import { ServersPage } from '@/features/servers/pages/ServersPage'
+import { PaymentsPage } from '@/features/payments/pages/PaymentsPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 
 export type AppRoute = {
@@ -27,5 +29,6 @@ export const routes: AppRoute[] = [
     Page: ProvidersPage,
   },
   { path: '/servers', title: 'Серверы', icon: Server, Page: ServersPage },
+  { path: '/payments', title: 'Платежи', icon: CreditCard, Page: PaymentsPage },
   { path: '/settings', title: 'Настройки', icon: Settings, Page: SettingsPage },
 ]

@@ -1,3 +1,4 @@
+import { NotificationStatusSection } from '@/features/notifications/components/NotificationStatusSection'
 import { NotificationSettingsSection } from '@/features/notifications/components/NotificationSettingsSection'
 import { VaultSettingsSection } from '@/features/vault/components/VaultSettingsSection'
 
@@ -7,6 +8,7 @@ export function SettingsPage() {
     <div className="mx-auto max-w-6xl space-y-10">
       <h1 className="text-3xl font-semibold">Настройки</h1>
       <NotificationSettingsSection />
+      <NotificationStatusSection />
       <VaultSettingsSection />
     </div>
   )

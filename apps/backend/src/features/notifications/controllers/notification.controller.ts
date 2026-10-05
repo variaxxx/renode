@@ -39,6 +39,13 @@ export class NotificationController {
     )
   }
 
+  /** Read delivery diagnostics without exposing bot credentials. */
+  @Get('status')
+  @Header('Cache-Control', 'no-store')
+  status() {
+    return this.notifications.status()
+  }
+
   /** Report success only after Telegram accepts the test message. */
   @Post('test')
   @HttpCode(204)

@@ -1,3 +1,4 @@
+import { Disclosure } from '@/components/ui/disclosure'
 import { useEffect, useState } from 'react'
 import { ChartColumn, RefreshCw } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
@@ -187,10 +188,10 @@ export function MonthlyExpensesChart({ revision }: { revision: number }) {
               `${monthLabel(data[0].month)} — ${monthLabel(data[data.length - 1].month)}. `}
             Включены платежи архивных серверов. Валюты не пересчитываются.
           </p>
-          <details className="mt-4 text-sm">
-            <summary className="cursor-pointer text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              Показать суммы по месяцам
-            </summary>
+          <Disclosure
+            className="mt-4 text-sm"
+            title={<> Показать суммы по месяцам </>}
+          >
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left">
                 <caption className="sr-only">
@@ -220,7 +221,7 @@ export function MonthlyExpensesChart({ revision }: { revision: number }) {
                 </tbody>
               </table>
             </div>
-          </details>
+          </Disclosure>
         </>
       )}
     </section>
