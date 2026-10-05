@@ -4,6 +4,8 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z
     .string()
     .regex(/^\d+:[A-Za-z0-9_-]+$/)
+    .or(z.literal(''))
+    .transform((value) => value || undefined)
     .optional(),
   DATABASE_URL: z
     .url()
@@ -15,6 +17,7 @@ export const envSchema = z.object({
       },
     ),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  HOST: z.string().min(1).default('127.0.0.1'),
   FRONTEND_ORIGIN: z
     .url()
     .refine(

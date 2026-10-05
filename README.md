@@ -1,5 +1,10 @@
 # renode
 
+## Production deployment
+
+See [deployment instructions](deploy/README.md) for HTTPS, Docker/GHCR images,
+owner and Telegram setup, migrations, PostgreSQL backups and recovery.
+
 ## Local development
 
 1. Run `bun install --frozen-lockfile`.
