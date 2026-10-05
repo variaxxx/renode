@@ -40,6 +40,10 @@ function errorMessage(code: string, fallback?: string): string {
       'Сначала перенесите или удалите серверы этого провайдера.',
     PROVIDER_NOT_FOUND: 'Провайдер не найден. Обновите список.',
     PROVIDER_INVALID: 'Проверьте данные провайдера.',
+    SERVER_NOT_FOUND: 'Сервер не найден. Обновите список.',
+    SERVER_HAS_PAYMENTS:
+      'У сервера есть история платежей. Архивируйте его вместо удаления.',
+    SERVER_INVALID: 'Проверьте данные сервера.',
   }
   return messages[code] ?? fallback ?? 'Не удалось выполнить запрос.'
 }

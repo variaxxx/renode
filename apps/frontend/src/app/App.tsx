@@ -4,6 +4,7 @@ import { AdminLayout } from '@/features/admin/components/AdminLayout'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { ServerDetailsPage } from '@/features/servers/pages/ServerDetailsPage'
 
 /** Render feature routes behind the owner session guard. */
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
+            <Route path="/servers/:id" element={<ServerDetailsPage />} />
             {routes.map(({ path, Page }) => (
               <Route key={path} path={path} element={<Page />} />
             ))}

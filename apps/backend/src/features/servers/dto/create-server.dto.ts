@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsISO31661Alpha2,
   IsISO8601,
   IsOptional,
   IsString,
@@ -72,6 +73,10 @@ export class CreateServerDto {
   @IsString()
   @MaxLength(253)
   domain?: string | null
+
+  @IsOptional()
+  @IsISO31661Alpha2()
+  country?: string | null
 
   @IsOptional()
   @IsString()

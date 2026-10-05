@@ -26,6 +26,15 @@ export function ProvidersPage() {
   const [editor, setEditor] = useState<
     { kind: 'create' } | { kind: 'edit'; provider: Provider } | null
   >(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorSession, setEditorSession] = useState(0)
+
+  /** Start a fresh form while retaining the previous one during exit. */
+  function openEditor(value: NonNullable<typeof editor>) {
+    setEditor(value)
+    setEditorSession((current) => current + 1)
+    setEditorOpen(true)
+  }
 
   /** Refresh the catalog after entry or a failed request. */
   const loadProviders = useCallback(async () => {
@@ -56,7 +65,7 @@ export function ProvidersPage() {
         left.name.localeCompare(right.name, 'ru'),
       ),
     )
-    setEditor(null)
+    setEditorOpen(false)
   }
 
   /** Replace the updated provider in the visible catalog. */
@@ -67,7 +76,7 @@ export function ProvidersPage() {
         .map((item) => (item.id === updated.id ? updated : item))
         .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
     )
-    setEditor(null)
+    setEditorOpen(false)
   }
 
   /** Remove a deleted provider from the visible catalog. */
@@ -75,23 +84,18 @@ export function ProvidersPage() {
     await deleteProvider(provider.id)
     setProviders((current) => current.filter((item) => item.id !== provider.id))
     if (editor?.kind === 'edit' && editor.provider.id === provider.id)
-      setEditor(null)
+      setEditorOpen(false)
   }
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold">Провайдеры</h1>
-        <Button onClick={() => setEditor({ kind: 'create' })}>
+        <Button onClick={() => openEditor({ kind: 'create' })}>
           Добавить провайдера
         </Button>
       </div>
-      <Dialog
-        open={editor !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditor(null)
-        }}
-      >
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -106,14 +110,14 @@ export function ProvidersPage() {
           </DialogHeader>
           {editor && (
             <ProviderForm
-              key={editor.kind === 'edit' ? editor.provider.id : 'new-provider'}
+              key={editorSession}
               provider={editor.kind === 'edit' ? editor.provider : undefined}
               onSubmit={(input) =>
                 editor.kind === 'edit'
                   ? handleUpdate(editor.provider, input)
                   : handleCreate(input)
               }
-              onCancel={() => setEditor(null)}
+              onCancel={() => setEditorOpen(false)}
             />
           )}
         </DialogContent>
@@ -123,7 +127,7 @@ export function ProvidersPage() {
         loading={loading}
         error={error}
         onRetry={() => void loadProviders()}
-        onEdit={(provider) => setEditor({ kind: 'edit', provider })}
+        onEdit={(provider) => openEditor({ kind: 'edit', provider })}
         onDelete={handleDelete}
       />
     </div>

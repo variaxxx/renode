@@ -21,6 +21,7 @@ export class ServerResponseDto {
       autoRenew: server.autoRenew,
       ipAddress: server.ipAddress,
       domain: server.domain,
+      country: server.country,
       project: server.project,
       tags: server.tags,
       note: server.note,

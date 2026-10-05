@@ -71,6 +71,7 @@ model Server {
   autoRenew            Boolean      @default(false) @map("auto_renew")
   ipAddress            String?      @map("ip_address") @db.VarChar(45)
   domain               String?      @db.VarChar(253)
+  country              String?      @db.VarChar(2)
   project              String?      @db.VarChar(160)
   tags                 String[]     @default([])
   note                 String?      @db.Text

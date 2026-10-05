@@ -31,6 +31,7 @@ export function ProviderList({
   onDelete,
 }: ProviderListProps) {
   const [confirming, setConfirming] = useState<Provider | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
@@ -40,7 +41,7 @@ export function ProviderList({
     setDeleteError('')
     try {
       await onDelete(provider)
-      setConfirming(null)
+      setConfirmOpen(false)
     } catch (failure) {
       setDeleteError(
         failure instanceof Error
@@ -128,6 +129,7 @@ export function ProviderList({
                 onClick={() => {
                   setDeleteError('')
                   setConfirming(provider)
+                  setConfirmOpen(true)
                 }}
               >
                 Удалить
@@ -137,12 +139,9 @@ export function ProviderList({
         ))}
       </ul>
       <AlertDialog
-        open={confirming !== null}
+        open={confirmOpen}
         onOpenChange={(open) => {
-          if (!open && !deleting) {
-            setConfirming(null)
-            setDeleteError('')
-          }
+          if (!deleting) setConfirmOpen(open)
         }}
       >
         <AlertDialogContent>
