@@ -4,7 +4,7 @@ import { VaultSettingsSection } from '@/features/vault/components/VaultSettingsS
 /** Combine notification and vault settings in one protected page. */
 export function SettingsPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-10">
+    <div className="mx-auto max-w-6xl space-y-10">
       <h1 className="text-3xl font-semibold">Настройки</h1>
       <NotificationSettingsSection />
       <VaultSettingsSection />

@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Brand } from '@/shared/ui/Brand'
 import { useAuth } from '@/features/auth/AuthContext'
 
 /** Render the owner password form. */
@@ -41,9 +42,7 @@ export function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <section className="w-full max-w-sm rounded-xl border border-border bg-card p-8 text-card-foreground shadow-xl">
-        <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase">
-          Renode
-        </p>
+        <Brand />
         <h1 className="mt-6 text-2xl font-semibold">Вход в админку</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Введите пароль владельца, чтобы открыть учет аренды серверов.

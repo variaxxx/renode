@@ -4,6 +4,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import { routes } from '@/app/routes'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/AuthContext'
+import { Brand } from '@/shared/ui/Brand'
 import { ApiError } from '@/shared/api/client'
 
 /** Render navigation only for a live owner session. */
@@ -32,12 +33,7 @@ export function AdminLayout() {
     <div className="min-h-screen md:flex">
       <aside className="border-b border-border bg-card md:min-h-screen md:w-60 md:border-r md:border-b-0">
         <div className="flex items-center justify-between p-5">
-          <div>
-            <p className="text-xl font-semibold">Renode</p>
-            <p className="text-xs text-muted-foreground">
-              Учет аренды серверов
-            </p>
-          </div>
+          <Brand />
           <Button
             variant="outline"
             size="sm"
