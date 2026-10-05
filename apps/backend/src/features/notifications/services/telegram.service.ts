@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { NotificationError } from '../notification.errors'
+import { TelegramSendError } from '../notification.errors'
 
 @Injectable()
 export class TelegramService {
@@ -14,13 +14,19 @@ export class TelegramService {
   ): Promise<void> {
     const token = this.config.get<string>('TELEGRAM_BOT_TOKEN')
     if (!token)
-      throw new NotificationError(
+      throw new TelegramSendError(
         'TELEGRAM_NOT_CONFIGURED',
         503,
         'Токен Telegram-бота не настроен на сервере.',
+        false,
       )
     let response: Response
-    let result: { ok?: boolean; description?: string }
+    let result: {
+      ok?: boolean
+      description?: string
+      error_code?: number
+      parameters?: { retry_after?: number }
+    }
     try {
       response = await fetch(
         `https://api.telegram.org/bot${token}/sendMessage`,
@@ -40,10 +46,11 @@ export class TelegramService {
         throw new Error('Invalid Telegram response')
       result = payload as typeof result
     } catch {
-      throw new NotificationError(
+      throw new TelegramSendError(
         'TELEGRAM_UNAVAILABLE',
         502,
         'Telegram недоступен или не ответил вовремя. Повторите попытку.',
+        true,
       )
     }
     if (!response.ok || result.ok !== true) {
@@ -51,10 +58,21 @@ export class TelegramService {
         typeof result.description === 'string'
           ? result.description.replaceAll(token, '[redacted]').slice(0, 300)
           : 'Неизвестная ошибка Telegram'
-      throw new NotificationError(
+      const errorCode =
+        typeof result.error_code === 'number'
+          ? result.error_code
+          : response.status
+      const retryAfter = result.parameters?.retry_after
+      throw new TelegramSendError(
         'TELEGRAM_SEND_FAILED',
         502,
         `Не удалось отправить сообщение: ${reason}`,
+        errorCode === 429 || errorCode >= 500,
+        typeof retryAfter === 'number' &&
+          Number.isFinite(retryAfter) &&
+          retryAfter > 0
+          ? retryAfter
+          : undefined,
       )
     }
   }

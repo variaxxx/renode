@@ -7,3 +7,15 @@ export class NotificationError extends Error {
     super(message)
   }
 }
+
+export class TelegramSendError extends NotificationError {
+  constructor(
+    code: string,
+    status: number,
+    message: string,
+    readonly retryable: boolean,
+    readonly retryAfterSeconds?: number,
+  ) {
+    super(code, status, message)
+  }
+}
