@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { getSession, login, logout } from '@/features/auth/api/auth'
 import { AuthContext, type AuthState } from '@/features/auth/AuthContext'
+import { lockVault } from '@/features/vault/lib/crypto'
 import { setUnauthorizedHandler } from '@/shared/api/client'
 
 /** Own the session state for all routes. */
@@ -10,6 +11,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Restore the server session and keep failures retryable. */
   const restore = useCallback(async () => {
+    lockVault()
     setState('checking')
     setError('')
     try {
@@ -29,18 +31,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [restore])
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setState('unauthenticated'))
-    return () => setUnauthorizedHandler(null)
+    window.addEventListener('pagehide', lockVault)
+    setUnauthorizedHandler(() => {
+      lockVault()
+      setState('unauthenticated')
+    })
+    return () => {
+      window.removeEventListener('pagehide', lockVault)
+      lockVault()
+      setUnauthorizedHandler(null)
+    }
   }, [])
 
   /** Start a session after successful password verification. */
   async function signIn(password: string) {
+    lockVault()
     await login(password)
     setState('authenticated')
   }
 
   /** End the server session before removing protected content. */
   async function signOut() {
+    lockVault()
     await logout()
     setState('unauthenticated')
   }

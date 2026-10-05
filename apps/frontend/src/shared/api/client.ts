@@ -30,6 +30,8 @@ export function setCsrfToken(token: string | null): void {
 /** Translate stable API errors into readable messages. */
 function errorMessage(code: string, fallback?: string): string {
   const messages: Record<string, string> = {
+    VAULT_ALREADY_EXISTS: 'Хранилище уже создано. Обновите страницу.',
+    VAULT_NOT_FOUND: 'Сначала создайте хранилище паролей.',
     INVALID_CREDENTIALS: 'Неверный пароль.',
     UNAUTHENTICATED: 'Сессия истекла. Войдите снова.',
     CSRF_INVALID: 'Запрос не прошёл проверку безопасности. Обновите страницу.',

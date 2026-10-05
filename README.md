@@ -27,3 +27,11 @@ All vault routes require the owner session, return `Cache-Control: no-store`, an
 Nested DTO validation rejects unknown fields, unsupported formats, malformed base64url, and invalid nonce, salt or DEK-wrapper lengths. Never send master passwords, recovery keys, unwrapped DEKs or provider plaintext passwords. Vault setup conflicts return `VAULT_ALREADY_EXISTS`; secret operations before setup return `VAULT_NOT_FOUND`. Deleting an eligible provider also deletes its encrypted password.
 
 Group 10 was manually verified against local PostgreSQL and the API: metadata and ciphertext round trips, foreign-key relations, session/CSRF protection, plaintext-field rejection, password change and recovery with unchanged provider ciphertext, and provider deletion cascade. Temporary verification data was removed.
+
+## Vault interface
+
+Open **Хранилище** to create a separate master password. Setup sends encrypted metadata only after you confirm saving the recovery key; the key is shown only during this setup step. Unlocking is separate from owner sign-in and applies only to the current tab. Reloading, leaving the document, signing out or an expired session removes its open key.
+
+In **Провайдеры**, use **Сохранить новый пароль**, **Показать пароль** and **Скрыть** for the account password. Locking the vault removes visible passwords and secret inputs. Provider notes remain unencrypted. Password changes and recovery use **Хранилище** and preserve existing encrypted provider passwords and the recovery wrapper.
+
+Group 11 was manually checked in Chrome with an isolated local fixture API: setup confirmation and one-time key display, invalid master-password rejection, unlock/lock, provider save/reveal/hide, reload while signed in, logout and repeated sign-in with the vault locked, master-password changes and recovery with access to an old provider password. Recorded vault requests contained encrypted envelopes only; provider ciphertext was saved once and remained unchanged during rewrapping. The interface was visually checked in the dark theme.

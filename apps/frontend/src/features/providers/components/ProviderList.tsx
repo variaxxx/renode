@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { ProviderSecret } from '@/features/vault/components/ProviderSecret'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -95,9 +103,36 @@ export function ProviderList({
                 key={provider.accountUrl}
                 accountUrl={provider.accountUrl}
               />
-              <h2 className="min-w-0 text-lg font-semibold break-words">
+              <h2 className="min-w-0 flex-1 text-lg font-semibold break-words">
                 {provider.name}
               </h2>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="size-9 shrink-0 p-0"
+                    aria-label={`Действия с провайдером «${provider.name}»`}
+                  >
+                    <MoreHorizontal aria-hidden="true" className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onEdit(provider)}>
+                    <Pencil aria-hidden="true" className="size-4" /> Изменить
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-400"
+                    onSelect={() => {
+                      setDeleteError('')
+                      setConfirming(provider)
+                      setConfirmOpen(true)
+                    }}
+                  >
+                    <Trash2 aria-hidden="true" className="size-4" /> Удалить
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <a
               href={provider.accountUrl}
@@ -115,26 +150,10 @@ export function ProviderList({
                 {provider.note}
               </p>
             )}
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(provider)}
-              >
-                Изменить
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setDeleteError('')
-                  setConfirming(provider)
-                  setConfirmOpen(true)
-                }}
-              >
-                Удалить
-              </Button>
-            </div>
+            <ProviderSecret
+              providerId={provider.id}
+              providerName={provider.name}
+            />
           </li>
         ))}
       </ul>

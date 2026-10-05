@@ -35,6 +35,7 @@ export type VaultMetadata = {
 
 let activeDek: CryptoKey | null = null
 let operationGeneration = 0
+const listeners = new Set<() => void>()
 
 // Copy bytes into a Web Crypto compatible buffer.
 function toBuffer(bytes: Uint8Array): ArrayBuffer {
@@ -180,6 +181,7 @@ async function activateDek(dek: Uint8Array, generation: number): Promise<void> {
   if (operationGeneration !== generation)
     throw new Error('Vault operation cancelled')
   activeDek = key
+  notifyVault()
 }
 
 // Create independent master and recovery wrappers around one random DEK.
@@ -264,6 +266,25 @@ export async function unlockWithRecoveryKey(
 export function lockVault(): void {
   activeDek = null
   operationGeneration += 1
+  notifyVault()
+}
+
+// Notify views so locking immediately removes their secret state.
+function notifyVault(): void {
+  for (const listener of listeners) listener()
+}
+
+// Subscribe a view to in-memory vault lock changes.
+export function subscribeVault(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+// Identify operations invalidated by an explicit lock or a later unlock.
+export function getVaultGeneration(): number {
+  return operationGeneration
 }
 
 // Report whether this tab currently holds the unlocked DEK.
@@ -278,11 +299,16 @@ export async function encryptProviderPassword(
 ): Promise<Ciphertext> {
   if (!activeDek) throw new Error('Vault is locked')
   if (!providerId) throw new Error('Provider ID is required')
-  return seal(
-    activeDek,
-    new TextEncoder().encode(password),
-    `provider:${providerId}`,
-  )
+  const generation = operationGeneration
+  const plaintext = new TextEncoder().encode(password)
+  try {
+    const encrypted = await seal(activeDek, plaintext, `provider:${providerId}`)
+    if (generation !== operationGeneration)
+      throw new Error('Vault operation cancelled')
+    return encrypted
+  } finally {
+    plaintext.fill(0)
+  }
 }
 
 // Decrypt one provider password only while this tab is unlocked.
@@ -300,5 +326,52 @@ export async function decryptProviderPassword(
     return new TextDecoder('utf-8', { fatal: true }).decode(plaintext)
   } finally {
     plaintext.fill(0)
+  }
+}
+
+// Rewrap the existing DEK after authenticating the master password or recovery key.
+export async function rewrapMasterPassword(
+  metadata: VaultMetadata,
+  unlockSecret: string,
+  newMasterPassword: string,
+  method: 'master' | 'recovery',
+): Promise<VaultMetadata['master']> {
+  if (!newMasterPassword) throw new Error('Master password is required')
+  if (metadata.version !== VERSION) throw new Error('Unsupported vault format')
+  const generation = operationGeneration
+  let unlockKey: CryptoKey
+  if (method === 'master') {
+    unlockKey = await deriveMasterKey(unlockSecret, metadata.master)
+  } else {
+    const bytes = decodeBytes(unlockSecret, KEY_BYTES)
+    try {
+      unlockKey = await importAesKey(bytes)
+    } finally {
+      bytes.fill(0)
+    }
+  }
+  const dek = await open(
+    unlockKey,
+    method === 'master'
+      ? metadata.master.wrappedDek
+      : metadata.recovery.wrappedDek,
+    `dek:${method}`,
+  )
+  try {
+    if (dek.length !== KEY_BYTES) throw new Error('Invalid vault key')
+    const master: MasterKdf = {
+      kdf: KDF,
+      salt: encodeBytes(randomBytes(SALT_BYTES)),
+      memoryKiB: KDF_MEMORY_KIB,
+      iterations: KDF_ITERATIONS,
+      parallelism: KDF_PARALLELISM,
+    }
+    const key = await deriveMasterKey(newMasterPassword, master)
+    const wrappedDek = await seal(key, dek, 'dek:master')
+    if (generation !== operationGeneration)
+      throw new Error('Vault operation cancelled')
+    return { ...master, wrappedDek }
+  } finally {
+    dek.fill(0)
   }
 }

@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { VaultPage } from '@/features/vault/pages/VaultPage'
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { OverviewPage } from '@/features/overview/pages/OverviewPage'
 import { PaymentsPage } from '@/features/payments/pages/PaymentsPage'
@@ -18,5 +19,6 @@ export const routes: AppRoute[] = [
   { path: '/servers', title: 'Серверы', Page: ServersPage },
   { path: '/payments', title: 'Платежи', Page: PaymentsPage },
   { path: '/notifications', title: 'Уведомления', Page: NotificationsPage },
+  { path: '/vault', title: 'Хранилище', Page: VaultPage },
   { path: '/settings', title: 'Настройки', Page: SettingsPage },
 ]
