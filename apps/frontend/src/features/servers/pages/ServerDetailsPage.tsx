@@ -29,6 +29,8 @@ import {
   type Server,
   type ServerInput,
 } from '@/features/servers/api/servers'
+import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
+import { PaymentHistory } from '@/features/payments/components/PaymentHistory'
 import { ServerForm } from '@/features/servers/components/ServerForm'
 import { countryFlag, countryName } from '@/features/servers/lib/countries'
 
@@ -65,6 +67,9 @@ export function ServerDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [providersError, setProvidersError] = useState('')
+  const [paymentServer, setPaymentServer] = useState<Server | null>(null)
+  const [paymentRevision, setPaymentRevision] = useState(0)
+  const [paymentNotice, setPaymentNotice] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingServer, setEditingServer] = useState<Server | null>(null)
   const [editorSession, setEditorSession] = useState(0)
@@ -197,6 +202,14 @@ export function ServerDetailsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
+                onClick={() => {
+                  setPaymentNotice('')
+                  setPaymentServer(server)
+                }}
+              >
+                Оплачено
+              </Button>
+              <Button
                 variant="outline"
                 disabled={providers.length === 0}
                 onClick={() => {
@@ -224,6 +237,25 @@ export function ServerDetailsPage() {
             </div>
           </div>
 
+          {paymentNotice && (
+            <p role="status" className="text-sm text-emerald-400">
+              {paymentNotice}
+            </p>
+          )}
+          {paymentServer && (
+            <PaymentDialog
+              server={paymentServer}
+              onClose={() => setPaymentServer(null)}
+              onSaved={() => {
+                setPaymentServer(null)
+                setPaymentRevision((value) => value + 1)
+                setPaymentNotice(
+                  'Платёж записан. Дата следующей оплаты обновлена.',
+                )
+                void loadDetails()
+              }}
+            />
+          )}
           {providersError && (
             <p role="alert" className="text-sm text-red-400">
               {providersError}
@@ -314,6 +346,8 @@ export function ServerDetailsPage() {
               </dl>
             </section>
           )}
+
+          <PaymentHistory serverId={server.id} revision={paymentRevision} />
 
           <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
             <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-3xl">
