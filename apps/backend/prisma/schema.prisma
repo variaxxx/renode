@@ -14,6 +14,7 @@ model Owner {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   sessions     Session[]
+  vault        Vault?
 
   @@map("owner")
 }
@@ -40,6 +41,7 @@ model Provider {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   servers    Server[]
+  secret     ProviderSecret?
 
   @@map("provider")
 }
@@ -83,4 +85,29 @@ model Server {
   @@index([status, nextPaymentDate])
   @@index([project])
   @@map("server")
+}
+
+model Vault {
+  id        String           @id @default(uuid()) @db.Uuid
+  ownerId   String           @unique @map("owner_id") @db.Uuid
+  metadata  Json
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  owner     Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  secrets   ProviderSecret[]
+
+  @@map("vault")
+}
+
+model ProviderSecret {
+  providerId String   @id @map("provider_id") @db.Uuid
+  vaultId    String   @map("vault_id") @db.Uuid
+  encrypted  Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  vault      Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId])
+  @@map("provider_secret")
 }

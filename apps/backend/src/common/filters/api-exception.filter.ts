@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common'
 import type { Response } from 'express'
+import { VaultError } from '../../features/credential-vault/vault.errors'
 import { AuthError } from '../../features/auth/auth.errors'
 import { ProviderError } from '../../features/providers/provider.errors'
 import { ServerError } from '../../features/servers/server.errors'
@@ -31,7 +32,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
     if (
       exception instanceof AuthError ||
       exception instanceof ProviderError ||
-      exception instanceof ServerError
+      exception instanceof ServerError ||
+      exception instanceof VaultError
     ) {
       return {
         status: exception.status,
