@@ -15,7 +15,7 @@ import { useVaultUnlocked } from '../lib/use-vault'
 type Mode = 'setup' | 'unlock' | 'master' | 'recovery'
 
 /** Manage the vault independently from the owner login session. */
-export function VaultPage() {
+export function VaultSettingsSection() {
   const unlocked = useVaultUnlocked()
   const [metadata, setMetadata] = useState<VaultMetadata | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,9 +71,11 @@ export function VaultPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <section id="vault" aria-labelledby="vault-title">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold">Хранилище паролей</h1>
+        <h2 id="vault-title" className="text-xl font-semibold">
+          Хранилище паролей
+        </h2>
         {unlocked && (
           <Button variant="outline" onClick={handleLock}>
             Заблокировать хранилище
@@ -200,6 +202,6 @@ export function VaultPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   )
 }

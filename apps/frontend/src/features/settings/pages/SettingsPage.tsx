@@ -1,6 +1,13 @@
-import { SectionPlaceholder } from '@/shared/ui/SectionPlaceholder'
+import { NotificationSettingsSection } from '@/features/notifications/components/NotificationSettingsSection'
+import { VaultSettingsSection } from '@/features/vault/components/VaultSettingsSection'
 
-/** Render the settings section. */
+/** Combine notification and vault settings in one protected page. */
 export function SettingsPage() {
-  return <SectionPlaceholder title="Настройки" />
+  return (
+    <div className="mx-auto max-w-3xl space-y-10">
+      <h1 className="text-3xl font-semibold">Настройки</h1>
+      <NotificationSettingsSection />
+      <VaultSettingsSection />
+    </div>
+  )
 }

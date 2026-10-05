@@ -1,6 +1,10 @@
 import { z } from 'zod'
 
 export const envSchema = z.object({
+  TELEGRAM_BOT_TOKEN: z
+    .string()
+    .regex(/^\d+:[A-Za-z0-9_-]+$/)
+    .optional(),
   DATABASE_URL: z
     .url()
     .refine(

@@ -15,6 +15,7 @@ model Owner {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   sessions     Session[]
   vault        Vault?
+  notificationSettings NotificationSettings?
 
   @@map("owner")
 }
@@ -126,4 +127,18 @@ model Payment {
 
   @@index([serverId, paymentDate])
   @@map("payment")
+}
+
+model NotificationSettings {
+  ownerId String @id @map("owner_id") @db.Uuid
+  chatId String? @map("chat_id") @db.VarChar(20)
+  threadId Int? @map("thread_id")
+  timezone String @default("Europe/Moscow") @db.VarChar(100)
+  paymentIntervals Int[] @default([7, 3, 1, 0]) @map("payment_intervals")
+  rentalEndIntervals Int[] @default([7, 3, 1, 0]) @map("rental_end_intervals")
+  cancellationIntervals Int[] @default([7, 3, 1, 0]) @map("cancellation_intervals")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  @@map("notification_settings")
 }

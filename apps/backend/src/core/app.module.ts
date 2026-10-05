@@ -1,3 +1,4 @@
+import { NotificationModule } from '../features/notifications/notification.module'
 import { Module } from '@nestjs/common'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule } from '@nestjs/throttler'
@@ -21,6 +22,7 @@ import { AppConfigModule } from './config.module'
     ProviderModule,
     ServerModule,
     PaymentModule,
+    NotificationModule,
     VaultModule,
     PrismaModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),

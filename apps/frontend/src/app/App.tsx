@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import { routes } from '@/app/routes'
 import { AdminLayout } from '@/features/admin/components/AdminLayout'
 import { AuthProvider } from '@/features/auth/AuthProvider'
@@ -15,6 +15,14 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/servers/:id" element={<ServerDetailsPage />} />
+            <Route
+              path="/notifications"
+              element={<Navigate to="/settings#notifications" replace />}
+            />
+            <Route
+              path="/vault"
+              element={<Navigate to="/settings#vault" replace />}
+            />
             {routes.map(({ path, Page }) => (
               <Route key={path} path={path} element={<Page />} />
             ))}
