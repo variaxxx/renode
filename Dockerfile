@@ -20,7 +20,7 @@ USER bun
 EXPOSE 3000
 CMD ["bun", "run", "start:api"]
 
-FROM caddy:2-alpine AS web
-COPY deploy/Caddyfile /etc/caddy/Caddyfile
-COPY --from=build /app/apps/frontend/dist /srv
-EXPOSE 80 443
+FROM nginx:stable-alpine AS web
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
+EXPOSE 80

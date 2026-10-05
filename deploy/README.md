@@ -1,6 +1,6 @@
 # Деплой Renode
 
-Нужны **Docker Engine с Compose v2**, домен с DNS-записью на сервер и открытые TCP-порты **80/443**. Caddy автоматически выпускает HTTPS-сертификаты. Все команды выполняются из корня проекта.
+Нужны **Docker Engine с Compose v2** и Traefik перед приложением. Nginx раздаёт frontend и проксирует `/api/` в backend по HTTP; HTTPS и сертификаты настраиваются в Traefik. Все команды выполняются из корня проекта.
 
 ## Настройки
 
@@ -14,28 +14,48 @@ chmod 600 deploy/.env
 | Переменная | Значение |
 | --- | --- |
 | `DOMAIN` | Домен без протокола и пути, например `renode.example.com` |
+| `HTTP_BIND`, `HTTP_PORT` | HTTP upstream для Traefik, по умолчанию `127.0.0.1:8080` |
 | `POSTGRES_USER`, `POSTGRES_DB` | Пользователь и имя базы |
 | `POSTGRES_PASSWORD` | Уникальный пароль базы |
 | `DATABASE_URL` | Подключение с тем же паролем, хостом `db` и портом `5432` |
 | `TELEGRAM_BOT_TOKEN` | Токен бота или пустое значение для отключения отправки |
-| `BACKEND_IMAGE`, `WEB_IMAGE` | Необязательно: пара образов GHCR с одинаковым тегом `sha-<полный SHA коммита>` |
+| `BACKEND_IMAGE`, `WEB_IMAGE` | Обязательно: пара готовых образов — локальных или из GHCR; для GHCR используйте одинаковый тег `sha-<полный SHA коммита>` |
 
 Спецсимволы пароля в `DATABASE_URL` должны быть URL-кодированы. Не коммитьте `.env`. `FRONTEND_ORIGIN` задаётся Compose автоматически по домену.
 
-## Первый запуск
+Направьте HTTPS-роутер Traefik для `DOMAIN` на `http://127.0.0.1:8080`, если Traefik работает на хосте. Если Traefik работает в Docker, подключите его к общей сети с сервисом `web` и используйте `http://web:80`: `127.0.0.1` внутри контейнера указывает на сам контейнер. Traefik должен передавать исходный `Host` и `X-Forwarded-Proto: https`.
 
-Сборка из исходников:
+## Локальная сборка образов
+
+Соберите оба образа из корня проекта:
 
 ```sh
-docker compose --env-file deploy/.env -f compose.production.yaml build
+docker build --target backend -t renode-backend:local .
+docker build --target web -t renode-web:local .
+```
+
+В `deploy/.env` укажите полученные теги:
+
+```dotenv
+BACKEND_IMAGE=renode-backend:local
+WEB_IMAGE=renode-web:local
+```
+
+Запустите приложение на том же Docker Engine без загрузки образов приложения из реестра:
+
+```sh
 docker compose --env-file deploy/.env -f compose.production.yaml up -d --wait
 ```
 
-При использовании готовых образов укажите `BACKEND_IMAGE` и `WEB_IMAGE` и вместо сборки выполните:
+При обновлении локальных образов повторите обе команды `docker build`, затем выполните команды остановки сервисов, миграции и запуска из раздела «Обновление», пропустив `pull`.
+
+## Первый запуск
+
+Production Compose использует только готовые образы. Для образов из GHCR укажите `BACKEND_IMAGE` и `WEB_IMAGE` и выполните:
 
 ```sh
 docker compose --env-file deploy/.env -f compose.production.yaml pull
-docker compose --env-file deploy/.env -f compose.production.yaml up -d --no-build --wait
+docker compose --env-file deploy/.env -f compose.production.yaml up -d --wait
 ```
 
 Образы публикуются в GHCR при push в `main`: `ghcr.io/<owner>/<repository>-backend` и `ghcr.io/<owner>/<repository>-web` (имена в нижнем регистре). Для закрытых пакетов предварительно выполните `docker login ghcr.io` с токеном `read:packages`.
@@ -73,12 +93,12 @@ curl --fail https://renode.example.com/api/health
 docker compose --env-file deploy/.env -f compose.production.yaml pull
 ```
 
-Для сборки из исходников обновите checkout и выполните `build` вместо `pull`. Затем:
+Затем:
 
 ```sh
 docker compose --env-file deploy/.env -f compose.production.yaml stop worker api
 docker compose --env-file deploy/.env -f compose.production.yaml run --rm --no-deps migrate
-docker compose --env-file deploy/.env -f compose.production.yaml up -d --no-build --wait
+docker compose --env-file deploy/.env -f compose.production.yaml up -d --wait
 ```
 
 Если миграция завершилась с ошибкой, устраните причину до запуска приложения. Откат образов допустим только при совместимой схеме базы.
@@ -105,4 +125,4 @@ docker compose --env-file deploy/.env -f compose.production.yaml exec -T db sh -
 
 После успешного восстановления примените миграции и запустите приложение. Не восстанавливайте dump поверх рабочей базы.
 
-**Не выполняйте `down -v` на сервере:** команда удаляет данные PostgreSQL и сертификаты. Изменение пароля в `.env` не меняет пароль в уже созданной базе — его нужно менять также в PostgreSQL.
+**Не выполняйте `down -v` на сервере:** команда удаляет данные PostgreSQL. Изменение пароля в `.env` не меняет пароль в уже созданной базе — его нужно менять также в PostgreSQL.

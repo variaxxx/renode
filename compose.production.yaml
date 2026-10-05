@@ -1,10 +1,7 @@
 name: renode
 
 x-backend: &backend
-  image: ${BACKEND_IMAGE:-renode-backend:local}
-  build:
-    context: .
-    target: backend
+  image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
   environment:
     DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with host db and port 5432}
     FRONTEND_ORIGIN: https://${DOMAIN:?Set DOMAIN}
@@ -58,18 +55,9 @@ services:
       migrate:
         condition: service_completed_successfully
   web:
-    image: ${WEB_IMAGE:-renode-web:local}
-    build:
-      context: .
-      target: web
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN}
+    image: ${WEB_IMAGE:?Set WEB_IMAGE}
     ports:
-      - '${HTTP_PORT:-80}:80'
-      - '${HTTPS_PORT:-443}:443'
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
+      - '${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:80'
     restart: unless-stopped
     depends_on:
       api:
@@ -77,5 +65,3 @@ services:
 
 volumes:
   postgres_data:
-  caddy_data:
-  caddy_config:
